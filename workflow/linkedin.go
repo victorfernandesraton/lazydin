@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 )
 
 const (
@@ -26,5 +27,15 @@ func Auth(username, password string) chromedp.Tasks {
 		chromedp.SendKeys(password_xpath, password),
 		chromedp.Click(submit_xpath),
 		chromedp.WaitVisible(search_xpath),
+	}
+}
+
+func SearchForPosts(query string) chromedp.Tasks {
+	return chromedp.Tasks{
+		chromedp.SendKeys(search_xpath, query),
+		chromedp.KeyEvent(kb.Enter),
+		chromedp.WaitVisible(button_posts),
+		chromedp.Click(button_posts),
+		chromedp.WaitVisible(post_xpath),
 	}
 }

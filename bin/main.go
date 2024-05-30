@@ -35,7 +35,10 @@ func main() {
 
 	// run task list
 	var res string
-	if err := chromedp.Run(ctx, workflow.Auth(os.Getenv("LINKEDIN_USERNAME"), os.Getenv("LINKEDIN_PASSWORD"))); err != nil {
+	if err := chromedp.Run(ctx,
+		workflow.Auth(os.Getenv("LINKEDIN_USERNAME"), os.Getenv("LINKEDIN_PASSWORD")),
+		workflow.SearchForPosts("GOLANG + REMOTO"),
+	); err != nil {
 		log.Fatal("Error when try login")
 	}
 
