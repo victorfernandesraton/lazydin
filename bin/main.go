@@ -47,4 +47,18 @@ func main() {
 	}
 
 	log.Println(res)
+	WriteToFile("output.html", res[0])
+}
+func WriteToFile(filename string, data string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(data); err != nil {
+		return err
+	}
+
+	return nil
 }
