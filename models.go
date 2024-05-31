@@ -11,3 +11,8 @@ type Author struct {
 	Name        string
 	Description string
 }
+
+type Content struct {
+	Post   Post
+	Author Author
+}

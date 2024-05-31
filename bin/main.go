@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/chromedp/chromedp"
+	linkedisney "github.com/victorfernandesraton/vagabot2"
 	"github.com/victorfernandesraton/vagabot2/workflow"
 )
 
@@ -20,8 +21,9 @@ func init() {
 }
 
 func main() {
+	headless := os.Getenv("HEADLESS")
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", false),
+		chromedp.Flag("headless", headless == "true"),
 		chromedp.Flag("start-maximized", true),
 		// other options below
 	)
@@ -46,19 +48,11 @@ func main() {
 		log.Fatal("Error when extract content", err)
 	}
 
-	log.Println(res)
-	WriteToFile("output.html", res[0])
-}
-func WriteToFile(filename string, data string) error {
-	file, err := os.Create(filename)
+	content, err := linkedisney.ExtractContent(res)
+
 	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	if _, err := file.WriteString(data); err != nil {
-		return err
+		log.Fatal("Error when parse content", err)
 	}
 
-	return nil
+	log.Println(len(content))
 }

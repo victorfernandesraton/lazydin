@@ -2,6 +2,7 @@ package linkedisney
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -17,7 +18,7 @@ const (
 func ExtractAuthor(dom *goquery.Document) (*Author, error) {
 	url, hasUrl := dom.Find(autor_avatar).Attr("href")
 	if !hasUrl {
-		return nil, errors.New("Not found author picture url")
+		return nil, nil
 	}
 	author := &Author{
 		Name:        dom.Find(author_name).First().Text(),
@@ -38,4 +39,32 @@ func ExtractPost(dom *goquery.Document) (*Post, error) {
 		Content: dom.Find(post).First().Text(),
 	}
 	return post, nil
+}
+
+func ExtractContent(results []string) (contents []Content, err error) {
+	for _, v := range results {
+		dom, err := goquery.NewDocumentFromReader(strings.NewReader(v))
+		if err != nil {
+			return nil, err
+		}
+		author, err := ExtractAuthor(dom)
+		if err != nil {
+			return nil, err
+		}
+		if author != nil {
+			post, err := ExtractPost(dom)
+			if err != nil {
+				return nil, err
+			}
+			post.AuthorUrl = author.Url
+			contents = append(contents, Content{
+				Author: *author,
+				Post:   *post,
+			})
+		}
+
+	}
+
+	return contents, nil
+
 }

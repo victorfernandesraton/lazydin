@@ -16,20 +16,17 @@ var dom *goquery.Document
 func TestMain(m *testing.M) {
 	filePath := filepath.Join("testdata", "output.html")
 
-	// Ler o conteúdo do arquivo
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		panic("failed to read test data file: " + err.Error())
 	}
 
-	// Armazenar o conteúdo na variável global
 	dom, err = goquery.NewDocumentFromReader(bytes.NewReader(content))
 
 	if err != nil {
 		panic("failed to parse document for goquery" + err.Error())
 	}
 
-	// Executa todos os testes
 	m.Run()
 }
 
