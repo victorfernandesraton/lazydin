@@ -1,4 +1,4 @@
-package linkedisney
+package lazydin
 
 type Post struct {
 	Url       string

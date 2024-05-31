@@ -1,4 +1,4 @@
-package linkedisney
+package lazydin
 
 import (
 	"errors"

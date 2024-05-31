@@ -1,15 +1,15 @@
-module github.com/victorfernandesraton/vagabot2
+module github.com/victorfernandesraton/lazydin
 
 go 1.22.1
 
 require (
+	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/chromedp/cdproto v0.0.0-20240529195259-de715aab5f80
 	github.com/chromedp/chromedp v0.9.5
 	github.com/joho/godotenv v1.5.1
 )
 
 require (
-	github.com/PuerkitoBio/goquery v1.9.2 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect

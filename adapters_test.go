@@ -1,4 +1,4 @@
-package linkedisney_test
+package lazydin_test
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
-	linkedisney "github.com/victorfernandesraton/vagabot2"
+	"github.com/victorfernandesraton/lazydin"
 )
 
 var dom *goquery.Document
@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseAuthor(t *testing.T) {
-	res, err := linkedisney.ExtractAuthor(dom)
+	res, err := lazydin.ExtractAuthor(dom)
 
 	if err != nil || res == nil {
 		t.Fail()
@@ -44,7 +44,7 @@ func TestParseAuthor(t *testing.T) {
 
 }
 func TestParsePost(t *testing.T) {
-	res, err := linkedisney.ExtractPost(dom)
+	res, err := lazydin.ExtractPost(dom)
 
 	if err != nil || res == nil {
 		t.Log(err)
