@@ -1,6 +1,9 @@
 package workflow
 
 import (
+	"context"
+
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 )
@@ -14,7 +17,7 @@ const (
 	search_xpath   = "//input[@placeholder='Search']"
 	search_qs      = "#global-nav-typeahead > input"
 	button_posts   = "//nav/*/ul/li/button[text() = 'Posts']"
-	post_xpath     = "//ul[@role='list' and contains(@class, 'reusable-search__entity-result-list ')]/li"
+	post_xpath     = "//ul[@role='list' and contains(@class, 'reusable-search__entity-result-list')]/li"
 )
 
 func Auth(username, password string) chromedp.Tasks {
@@ -30,7 +33,7 @@ func Auth(username, password string) chromedp.Tasks {
 	}
 }
 
-func SearchForPosts(query string) chromedp.Tasks {
+func SearchForPosts(query string, outerHTML *[]string) chromedp.Tasks {
 	return chromedp.Tasks{
 		chromedp.SendKeys(search_xpath, query),
 		chromedp.KeyEvent(kb.Enter),
@@ -38,4 +41,19 @@ func SearchForPosts(query string) chromedp.Tasks {
 		chromedp.Click(button_posts),
 		chromedp.WaitVisible(post_xpath),
 	}
+}
+func ExtractOuterHTML(ctx context.Context) (outerHTML []string, err error) {
+	var nodes []*cdp.Node
+	if err := chromedp.Run(ctx, chromedp.Nodes(post_xpath, &nodes, chromedp.BySearch)); err != nil {
+		return nil, err
+	}
+
+	for _, node := range nodes {
+		var html string
+		if err := chromedp.Run(ctx, chromedp.OuterHTML(node.FullXPath(), &html)); err != nil {
+			return nil, err
+		}
+		outerHTML = append(outerHTML, html)
+	}
+	return outerHTML, nil
 }

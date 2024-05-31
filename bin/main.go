@@ -6,7 +6,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/joho/godotenv"
 
@@ -23,7 +22,7 @@ func init() {
 func main() {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", false),
-		chromedp.Flag("start-fullscreen", true),
+		chromedp.Flag("start-maximized", true),
 		// other options below
 	)
 	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
@@ -34,13 +33,18 @@ func main() {
 	defer cancel()
 
 	// run task list
-	var res string
+	var res []string
+
 	if err := chromedp.Run(ctx,
 		workflow.Auth(os.Getenv("LINKEDIN_USERNAME"), os.Getenv("LINKEDIN_PASSWORD")),
-		workflow.SearchForPosts("GOLANG + REMOTO"),
+		workflow.SearchForPosts("GOLANG + REMOTO", &res),
 	); err != nil {
-		log.Fatal("Error when try login")
+		log.Fatal("Error when execute", err)
+	}
+	res, err := workflow.ExtractOuterHTML(ctx)
+	if err != nil {
+		log.Fatal("Error when extract content", err)
 	}
 
-	log.Println(strings.TrimSpace(res))
+	log.Println(res)
 }
