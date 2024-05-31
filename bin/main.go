@@ -2,40 +2,33 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
-
 	"github.com/chromedp/chromedp"
+	"github.com/joho/godotenv"
+	"github.com/spf13/cobra"
 	"github.com/victorfernandesraton/lazydin"
 	"github.com/victorfernandesraton/lazydin/workflow"
-
-	"errors"
-
-	"github.com/spf13/cobra"
 )
 
-func GetUserAndPassword(cmd *cobra.Command) (string, string) {
-	username := os.Getenv("LINKEDIN_USERNAME")
-	password := os.Getenv("LINKEDIN_PASSWORD")
-	user, _ := cmd.Flags().GetString("user")
-	pass, _ := cmd.Flags().GetString("password")
+// Constants for flag names
+const (
+	flagUser          = "user"
+	flagPassword      = "password"
+	flagConfig        = "config"
+	flagQuery         = "query"
+	defaultConfigFile = "lazydin.sqlite"
+)
 
-	if user != "" {
-		username = user
-	}
-	if pass != "" {
-		password = pass
-	}
+var (
+	configFile string
+	username   string
+	password   string
+)
 
-	return username, password
-}
-
-var configFile string
-
-// Cobra command structure
 var rootCmd = &cobra.Command{
 	Use:   "vagabot",
 	Short: "CLI for interacting with Linkedin",
@@ -44,81 +37,113 @@ var rootCmd = &cobra.Command{
 var searchPostsCmd = &cobra.Command{
 	Use:   "search-posts",
 	Short: "Search for posts on Linkedin",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		query, err := cmd.Flags().GetString("query")
-		if err != nil {
-			return err
-		}
-		username, password := GetUserAndPassword(cmd)
-		fmt.Println(username, password)
-		opts := CreateBrowserOptions()
-		actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
-		defer acancel()
-		ctx, cancel := chromedp.NewContext(actx, chromedp.WithDebugf(log.Printf))
-		defer cancel()
-
-		var htmlPost []string
-		if err := chromedp.Run(ctx,
-			workflow.Auth(username, password),
-			workflow.SearchForPosts(query, &htmlPost),
-		); err != nil {
-			log.Fatal("Error when execute", err)
-			return err
-		}
-		content, err := workflow.ExtractOuterHTML(ctx)
-		if err != nil {
-			log.Fatal("Error when extract content", err)
-			return err
-		}
-
-		result, err := lazydin.ExtractContent(content)
-		if err != nil {
-			log.Fatal("Error when parse content", err)
-
-			return err
-		}
-		log.Println(len(result))
-		return nil
-	},
+	RunE:  searchPosts,
 }
 
 var commentPostCmd = &cobra.Command{
 	Use:   "post-comment",
 	Short: "Post a comment on a Linkedin post",
 	Run: func(cmd *cobra.Command, args []string) {
-		panic(errors.New("not implemented yed"))
+		log.Fatal(errors.New("not implemented yet"))
 	},
 }
 
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
 func init() {
-	// Load .env file
 	if err := godotenv.Load(); err != nil {
-		panic(err)
+		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	rootCmd.Flags().StringP("user", "u", "", "Linkedin Username")
-	rootCmd.Flags().StringP("password", "p", "", "Linkedin Password")
-	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "lazydin.sqlite", "Path to configuration file (optional)")
-	searchPostsCmd.Flags().StringP("query", "q", "", "Query for search post")
+	rootCmd.PersistentFlags().StringP(flagUser, "u", "", "Linkedin Username")
+	rootCmd.PersistentFlags().StringP(flagPassword, "p", "", "Linkedin Password")
+
+	searchPostsCmd.Flags().StringP(flagQuery, "q", "", "Query for search post")
 
 	rootCmd.AddCommand(searchPostsCmd)
 	rootCmd.AddCommand(commentPostCmd)
+
+	if err := loadCredentials(); err != nil {
+		log.Fatalf("Error loading credentials: %v", err)
+	}
 }
 
-func CreateBrowserOptions() []chromedp.ExecAllocatorOption {
+// searchPosts handles the search-posts command
+func searchPosts(cmd *cobra.Command, args []string) error {
+	query, err := cmd.Flags().GetString(flagQuery)
+	if err != nil {
+		return fmt.Errorf("failed to get query flag: %w", err)
+	}
+	if query == "" {
+		return errors.New("query flag is required")
+	}
 
-	headless := os.Getenv("HEADLESS")
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", headless == "true"),
+	opts := createBrowserOptions()
+	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer acancel()
+
+	ctx, cancel := chromedp.NewContext(actx, chromedp.WithDebugf(log.Printf))
+	defer cancel()
+
+	var htmlPost []string
+	if err := chromedp.Run(ctx,
+		workflow.Auth(username, password),
+		workflow.SearchForPosts(query, &htmlPost),
+	); err != nil {
+		return fmt.Errorf("failed to execute chromedp tasks: %w", err)
+	}
+
+	content, err := workflow.ExtractOuterHTML(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to extract outer HTML: %w", err)
+	}
+
+	result, err := lazydin.ExtractContent(content)
+	if err != nil {
+		return fmt.Errorf("failed to extract content: %w", err)
+	}
+
+	log.Printf("Number of posts found: %d", len(result))
+	return nil
+}
+
+// loadCredentials loads the Linkedin credentials from environment variables or flags
+func loadCredentials() error {
+	envUsername := os.Getenv("LINKEDIN_USERNAME")
+	envPassword := os.Getenv("LINKEDIN_PASSWORD")
+
+	usernameFlag := rootCmd.PersistentFlags().Lookup(flagUser).Value.String()
+	passwordFlag := rootCmd.PersistentFlags().Lookup(flagPassword).Value.String()
+
+	if usernameFlag != "" {
+		username = usernameFlag
+	} else {
+		username = envUsername
+	}
+
+	if passwordFlag != "" {
+		password = passwordFlag
+	} else {
+		password = envPassword
+	}
+
+	if username == "" || password == "" {
+		return errors.New("username and password must be set either via flags or environment variables")
+	}
+
+	return nil
+}
+
+// createBrowserOptions creates the browser options for chromedp
+func createBrowserOptions() []chromedp.ExecAllocatorOption {
+	headless := os.Getenv("HEADLESS") == "true"
+	return append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", headless),
 		chromedp.Flag("start-maximized", true),
 	)
-	return opts
-}
-
-func main() {
-
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(0)
-	}
 }
