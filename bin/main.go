@@ -10,7 +10,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
-	"github.com/victorfernandesraton/lazydin"
+	"github.com/victorfernandesraton/lazydin/adapters"
 	"github.com/victorfernandesraton/lazydin/workflow"
 )
 
@@ -103,7 +103,7 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to extract outer HTML: %w", err)
 	}
 
-	result, err := lazydin.ExtractContent(content)
+	result, err := adapters.ExtractContent(content)
 	if err != nil {
 		return fmt.Errorf("failed to extract content: %w", err)
 	}

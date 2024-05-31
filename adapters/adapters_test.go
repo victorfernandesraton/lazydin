@@ -1,4 +1,4 @@
-package lazydin_test
+package adapters_test
 
 import (
 	"bytes"
@@ -8,13 +8,13 @@ import (
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/victorfernandesraton/lazydin"
+	"github.com/victorfernandesraton/lazydin/adapters"
 )
 
 var dom *goquery.Document
 
 func TestMain(m *testing.M) {
-	filePath := filepath.Join("testdata", "output.html")
+	filePath := filepath.Join("..", "testdata", "output.html")
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseAuthor(t *testing.T) {
-	res, err := lazydin.ExtractAuthor(dom)
+	res, err := adapters.ExtractAuthor(dom)
 
 	if err != nil || res == nil {
 		t.Fail()
@@ -44,7 +44,7 @@ func TestParseAuthor(t *testing.T) {
 
 }
 func TestParsePost(t *testing.T) {
-	res, err := lazydin.ExtractPost(dom)
+	res, err := adapters.ExtractPost(dom)
 
 	if err != nil || res == nil {
 		t.Log(err)
