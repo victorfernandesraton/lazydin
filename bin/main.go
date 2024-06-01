@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/chromedp/chromedp"
+	"github.com/gocarina/gocsv"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/victorfernandesraton/lazydin/adapters"
@@ -20,6 +23,8 @@ const (
 	flagPassword      = "password"
 	flagConfig        = "config"
 	flagQuery         = "query"
+	flagOutput        = "output"
+	flagSeparator     = "sep"
 	defaultConfigFile = "lazydin.sqlite"
 )
 
@@ -64,6 +69,8 @@ func init() {
 	rootCmd.PersistentFlags().StringP(flagPassword, "p", "", "Linkedin Password")
 
 	searchPostsCmd.Flags().StringP(flagQuery, "q", "", "Query for search post")
+	searchPostsCmd.Flags().StringP(flagOutput, "o", "", "Output file as csv")
+	searchPostsCmd.Flags().StringP(flagSeparator, "", ";", "Output file as csv separator")
 
 	rootCmd.AddCommand(searchPostsCmd)
 	rootCmd.AddCommand(commentPostCmd)
@@ -82,7 +89,15 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 	if query == "" {
 		return errors.New("query flag is required")
 	}
+	outputFile, err := cmd.Flags().GetString(flagOutput)
+	if err != nil {
+		return fmt.Errorf("failed to get output flag: %w", err)
+	}
 
+	separator, err := cmd.Flags().GetString(flagSeparator)
+	if err != nil {
+		return fmt.Errorf("failed to get csv separator: %w", err)
+	}
 	opts := createBrowserOptions()
 	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer acancel()
@@ -106,8 +121,27 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to extract content: %w", err)
 	}
+	if outputFile == "" {
+		log.Printf("Number of posts found: %d", len(result))
+	} else if strings.HasSuffix(outputFile, ".csv") {
 
-	log.Printf("Number of posts found: %d", len(result))
+		file, err := os.Create(outputFile)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		csvWriter := csv.NewWriter(file)
+		runeSeparator := []rune(separator)
+		csvWriter.Comma = runeSeparator[0]
+		err = gocsv.MarshalCSV(&result, csvWriter)
+		if err != nil {
+			return err
+		}
+		csvWriter.Flush()
+	} else {
+		return errors.New(fmt.Sprintf("Invalid file format for output, got %v, but only supported is .csv", outputFile))
+	}
+
 	return nil
 }
 
