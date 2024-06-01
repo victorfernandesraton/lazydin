@@ -92,8 +92,7 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 
 	var htmlPost []string
 	if err := chromedp.Run(ctx,
-		workflow.Auth(username, password),
-		workflow.SearchForPosts(query, &htmlPost),
+		workflow.Auth(username, password), workflow.SearchForPosts(query, &htmlPost),
 	); err != nil {
 		return fmt.Errorf("failed to execute chromedp tasks: %w", err)
 	}
@@ -133,7 +132,9 @@ func loadCredentials() error {
 	}
 
 	if username == "" || password == "" {
-		return errors.New("username and password must be set either via flags or environment variables")
+		return errors.New(
+			"username and password must be set either via flags or environment variables",
+		)
 	}
 
 	return nil
