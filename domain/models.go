@@ -1,4 +1,4 @@
-package lazydin
+package domain
 
 type Post struct {
 	Url       string

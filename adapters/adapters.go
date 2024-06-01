@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/victorfernandesraton/lazydin"
+	"github.com/victorfernandesraton/lazydin/domain"
 )
 
 const (
@@ -16,12 +16,12 @@ const (
 	post_link          = "li div.feed-shared-update-v2"
 )
 
-func ExtractAuthor(dom *goquery.Document) (*lazydin.Author, error) {
+func ExtractAuthor(dom *goquery.Document) (*domain.Author, error) {
 	url, hasUrl := dom.Find(autor_avatar).Attr("href")
 	if !hasUrl {
 		return nil, nil
 	}
-	author := &lazydin.Author{
+	author := &domain.Author{
 		Name:        dom.Find(author_name).First().Text(),
 		Description: dom.Find(author_description).First().Text(),
 		Url:         url,
@@ -29,20 +29,20 @@ func ExtractAuthor(dom *goquery.Document) (*lazydin.Author, error) {
 	return author, nil
 }
 
-func ExtractPost(dom *goquery.Document) (*lazydin.Post, error) {
+func ExtractPost(dom *goquery.Document) (*domain.Post, error) {
 	urn, hasUrn := dom.Find(post_link).First().Attr("data-urn")
 	if !hasUrn {
 		return nil, errors.New("Not found urn in user")
 	}
 
-	post := &lazydin.Post{
+	post := &domain.Post{
 		Url:     urn,
 		Content: dom.Find(post).First().Text(),
 	}
 	return post, nil
 }
 
-func ExtractContent(results []string) (contents []lazydin.Content, err error) {
+func ExtractContent(results []string) (contents []domain.Content, err error) {
 	for _, v := range results {
 		dom, err := goquery.NewDocumentFromReader(strings.NewReader(v))
 		if err != nil {
@@ -58,7 +58,7 @@ func ExtractContent(results []string) (contents []lazydin.Content, err error) {
 				return nil, err
 			}
 			post.AuthorUrl = author.Url
-			contents = append(contents, lazydin.Content{
+			contents = append(contents, domain.Content{
 				Author: *author,
 				Post:   *post,
 			})
