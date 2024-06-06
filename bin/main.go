@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/chromedp/chromedp"
@@ -19,19 +20,23 @@ import (
 
 // Constants for flag names
 const (
-	flagUser          = "user"
-	flagPassword      = "password"
-	flagConfig        = "config"
-	flagQuery         = "query"
-	flagOutput        = "output"
-	flagSeparator     = "sep"
-	defaultConfigFile = "lazydin.sqlite"
+	flagUser               = "user"
+	flagPassword           = "password"
+	flagConfig             = "config"
+	flagQuery              = "query"
+	flagOutput             = "output"
+	flagSeparator          = "sep"
+	flagCredentials        = "credentials"
+	flagDatabase           = "database"
+	defaultDatabaseFile    = "lazydin.sqlite"
+	defaultCredentialsFile = "credentials.toml"
 )
 
 var (
-	configFile string
-	username   string
-	password   string
+	configPath      string
+	credentialsFile string
+	username        string
+	password        string
 )
 
 var rootCmd = &cobra.Command{
@@ -53,20 +58,21 @@ var commentPostCmd = &cobra.Command{
 	},
 }
 
-func main() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
 func init() {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		panic(err)
+	}
+	configPath = path.Join(dir, "lazydin")
+	credentialsFile = path.Join(configPath, defaultCredentialsFile)
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
+	rootCmd.PersistentFlags().StringP(flagConfig, "c", configPath, "Configguration path")
 	rootCmd.PersistentFlags().StringP(flagUser, "u", "", "Linkedin Username")
 	rootCmd.PersistentFlags().StringP(flagPassword, "p", "", "Linkedin Password")
+	rootCmd.PersistentFlags().String(flagCredentials, credentialsFile, "Credential file storage in toml")
 
 	searchPostsCmd.Flags().StringP(flagQuery, "q", "", "Query for search post")
 	searchPostsCmd.Flags().StringP(flagOutput, "o", "", "Output file as csv")
@@ -77,6 +83,13 @@ func init() {
 
 	if err := loadCredentials(); err != nil {
 		log.Fatalf("Error loading credentials: %v", err)
+	}
+}
+
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -123,24 +136,23 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 	}
 	if outputFile == "" {
 		log.Printf("Number of posts found: %d", len(result))
-	} else if strings.HasSuffix(outputFile, ".csv") {
-
-		file, err := os.Create(outputFile)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		csvWriter := csv.NewWriter(file)
-		runeSeparator := []rune(separator)
-		csvWriter.Comma = runeSeparator[0]
-		err = gocsv.MarshalCSV(&result, csvWriter)
-		if err != nil {
-			return err
-		}
-		csvWriter.Flush()
-	} else {
-		return errors.New(fmt.Sprintf("Invalid file format for output, got %v, but only supported is .csv", outputFile))
+	} else if !strings.HasSuffix(outputFile, ".csv") {
+		return fmt.Errorf("invalid file format for output, got %v, but only supported is .csv", outputFile)
 	}
+
+	file, err := os.Create(outputFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	csvWriter := csv.NewWriter(file)
+	runeSeparator := []rune(separator)
+	csvWriter.Comma = runeSeparator[0]
+	err = gocsv.MarshalCSV(&result, csvWriter)
+	if err != nil {
+		return err
+	}
+	csvWriter.Flush()
 
 	return nil
 }
