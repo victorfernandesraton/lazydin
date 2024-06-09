@@ -1,25 +1,27 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/chromedp/chromedp"
 	"github.com/gocarina/gocsv"
-	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/victorfernandesraton/lazydin/adapters"
 	"github.com/victorfernandesraton/lazydin/workflow"
 )
 
 // Constants for flag names
 const (
+	appName                = "lazydin"
 	flagUser               = "user"
 	flagPassword           = "password"
 	flagConfig             = "config"
@@ -30,6 +32,8 @@ const (
 	flagDatabase           = "database"
 	defaultDatabaseFile    = "lazydin.sqlite"
 	defaultCredentialsFile = "credentials.toml"
+	configUsername         = "username"
+	configPassword         = "password"
 )
 
 var (
@@ -58,16 +62,32 @@ var commentPostCmd = &cobra.Command{
 	},
 }
 
+var createCredentials = &cobra.Command{
+	Use:   "create-credentials",
+	Short: "Start proccess to define credentials in config credentials file",
+	Run: func(cmd *cobra.Command, args []string) {
+		reader := bufio.NewReader(os.Stdin)
+
+		fmt.Print("Enter username: ")
+		username, _ := reader.ReadString('\n')
+		username = strings.TrimSpace(username)
+
+		fmt.Print("Enter password: ")
+		password, _ := reader.ReadString('\n')
+		password = strings.TrimSpace(password)
+
+		viper.Set(configUsername, username)
+		viper.Set(configPassword, password)
+		viper.WriteConfig()
+	},
+}
+
+type Credentials struct {
+	Name     string
+	Password string
+}
+
 func init() {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		panic(err)
-	}
-	configPath = path.Join(dir, "lazydin")
-	credentialsFile = path.Join(configPath, defaultCredentialsFile)
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
 
 	rootCmd.PersistentFlags().StringP(flagConfig, "c", configPath, "Configguration path")
 	rootCmd.PersistentFlags().StringP(flagUser, "u", "", "Linkedin Username")
@@ -80,16 +100,37 @@ func init() {
 
 	rootCmd.AddCommand(searchPostsCmd)
 	rootCmd.AddCommand(commentPostCmd)
+	rootCmd.AddCommand(createCredentials)
 
-	if err := loadCredentials(); err != nil {
-		log.Fatalf("Error loading credentials: %v", err)
+	home, err := os.UserConfigDir()
+	if err != nil {
+		log.Fatalf(err.Error())
+
+	}
+	configPath := filepath.Join(home, "lazydin", "config.toml")
+	viper.Set(configUsername, "user@mail.com")
+	viper.Set(configPassword, "user.pass")
+	viper.SetConfigFile(configPath)
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		viper.Set("username", viper.GetString("username"))
+		viper.Set("password", viper.GetString("password"))
+		if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+			log.Fatalf(err.Error())
+		}
+		if err := viper.WriteConfigAs(configPath); err != nil {
+			log.Fatalf(err.Error())
+		}
+	}
+	if err := viper.ReadInConfig(); err != nil {
+
+		log.Fatalf(err.Error())
 	}
 }
 
 func main() {
+
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf(err.Error())
 	}
 }
 
