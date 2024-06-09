@@ -82,13 +82,7 @@ var createCredentials = &cobra.Command{
 	},
 }
 
-type Credentials struct {
-	Name     string
-	Password string
-}
-
 func init() {
-
 	rootCmd.PersistentFlags().StringP(flagConfig, "c", configPath, "Configguration path")
 	rootCmd.PersistentFlags().StringP(flagUser, "u", "", "Linkedin Username")
 	rootCmd.PersistentFlags().StringP(flagPassword, "p", "", "Linkedin Password")
@@ -108,12 +102,11 @@ func init() {
 
 	}
 	configPath := filepath.Join(home, "lazydin", "config.toml")
-	viper.Set(configUsername, "user@mail.com")
-	viper.Set(configPassword, "user.pass")
+
 	viper.SetConfigFile(configPath)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		viper.Set("username", viper.GetString("username"))
-		viper.Set("password", viper.GetString("password"))
+		viper.Set(configUsername, "user@mail.com")
+		viper.Set(configPassword, "user.pass")
 		if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 			log.Fatalf(err.Error())
 		}
@@ -122,7 +115,6 @@ func init() {
 		}
 	}
 	if err := viper.ReadInConfig(); err != nil {
-
 		log.Fatalf(err.Error())
 	}
 }
@@ -152,11 +144,12 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get csv separator: %w", err)
 	}
+	loadCredentials()
 	opts := createBrowserOptions()
 	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer acancel()
 
-	ctx, cancel := chromedp.NewContext(actx, chromedp.WithDebugf(log.Printf))
+	ctx, cancel := chromedp.NewContext(actx)
 	defer cancel()
 
 	var htmlPost []string
@@ -177,7 +170,9 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 	}
 	if outputFile == "" {
 		log.Printf("Number of posts found: %d", len(result))
-	} else if !strings.HasSuffix(outputFile, ".csv") {
+		return nil
+	}
+	if !strings.HasSuffix(outputFile, ".csv") {
 		return fmt.Errorf("invalid file format for output, got %v, but only supported is .csv", outputFile)
 	}
 
@@ -200,8 +195,8 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 
 // loadCredentials loads the Linkedin credentials from environment variables or flags
 func loadCredentials() error {
-	envUsername := os.Getenv("LINKEDIN_USERNAME")
-	envPassword := os.Getenv("LINKEDIN_PASSWORD")
+	envUsername := viper.GetString(configUsername)
+	envPassword := viper.GetString(configPassword)
 
 	usernameFlag := rootCmd.PersistentFlags().Lookup(flagUser).Value.String()
 	passwordFlag := rootCmd.PersistentFlags().Lookup(flagPassword).Value.String()
