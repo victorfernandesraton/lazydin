@@ -14,9 +14,9 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/gocarina/gocsv"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"github.com/victorfernandesraton/lazydin/adapters"
 	"github.com/victorfernandesraton/lazydin/browser"
+	"github.com/victorfernandesraton/lazydin/config"
 	"github.com/victorfernandesraton/lazydin/workflow"
 )
 
@@ -40,8 +40,7 @@ const (
 var (
 	configPath      string
 	credentialsFile string
-	username        string
-	password        string
+	configs         *config.Config
 )
 
 var rootCmd = &cobra.Command{
@@ -66,7 +65,7 @@ var commentPostCmd = &cobra.Command{
 var createCredentials = &cobra.Command{
 	Use:   "create-credentials",
 	Short: "Start proccess to define credentials in config credentials file",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		reader := bufio.NewReader(os.Stdin)
 
 		fmt.Print("Enter username: ")
@@ -76,10 +75,8 @@ var createCredentials = &cobra.Command{
 		fmt.Print("Enter password: ")
 		password, _ := reader.ReadString('\n')
 		password = strings.TrimSpace(password)
+		return config.SetCredentials(username, password)
 
-		viper.Set(configUsername, username)
-		viper.Set(configPassword, password)
-		viper.WriteConfig()
 	},
 }
 
@@ -103,20 +100,11 @@ func init() {
 
 	}
 	configPath := filepath.Join(home, "lazydin", "config.toml")
+	configs, err = config.LoadConfig(configPath)
 
-	viper.SetConfigFile(configPath)
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		viper.Set(configUsername, "user@mail.com")
-		viper.Set(configPassword, "user.pass")
-		if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-			log.Fatalf(err.Error())
-		}
-		if err := viper.WriteConfigAs(configPath); err != nil {
-			log.Fatalf(err.Error())
-		}
-	}
-	if err := viper.ReadInConfig(); err != nil {
+	if err != nil {
 		log.Fatalf(err.Error())
+
 	}
 }
 
@@ -145,7 +133,13 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get csv separator: %w", err)
 	}
-	loadCredentials()
+
+	usernameFlag := rootCmd.PersistentFlags().Lookup(flagUser).Value.String()
+	passwordFlag := rootCmd.PersistentFlags().Lookup(flagPassword).Value.String()
+	credentials, err := config.LoadCredentials(configs, usernameFlag, passwordFlag)
+	if err != nil {
+		return err
+	}
 	opts := browser.CreateBrowserOptions(browser.DefaultBrowserOptions())
 	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer acancel()
@@ -155,7 +149,7 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 
 	var htmlPost []string
 	if err := chromedp.Run(ctx,
-		workflow.Auth(username, password), workflow.SearchForPosts(query, &htmlPost),
+		workflow.Auth(credentials.Username, credentials.Password), workflow.SearchForPosts(query, &htmlPost),
 	); err != nil {
 		return fmt.Errorf("failed to execute chromedp tasks: %w", err)
 	}
@@ -191,35 +185,6 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	csvWriter.Flush()
-
-	return nil
-}
-
-// loadCredentials loads the Linkedin credentials from environment variables or flags
-func loadCredentials() error {
-	envUsername := viper.GetString(configUsername)
-	envPassword := viper.GetString(configPassword)
-
-	usernameFlag := rootCmd.PersistentFlags().Lookup(flagUser).Value.String()
-	passwordFlag := rootCmd.PersistentFlags().Lookup(flagPassword).Value.String()
-
-	if usernameFlag != "" {
-		username = usernameFlag
-	} else {
-		username = envUsername
-	}
-
-	if passwordFlag != "" {
-		password = passwordFlag
-	} else {
-		password = envPassword
-	}
-
-	if username == "" || password == "" {
-		return errors.New(
-			"username and password must be set either via flags or environment variables",
-		)
-	}
 
 	return nil
 }
