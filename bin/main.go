@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/victorfernandesraton/lazydin/adapters"
+	"github.com/victorfernandesraton/lazydin/browser"
 	"github.com/victorfernandesraton/lazydin/workflow"
 )
 
@@ -145,11 +146,11 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get csv separator: %w", err)
 	}
 	loadCredentials()
-	opts := createBrowserOptions()
+	opts := browser.CreateBrowserOptions(browser.DefaultBrowserOptions())
 	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer acancel()
 
-	ctx, cancel := chromedp.NewContext(actx)
+	ctx, cancel := chromedp.NewContext(actx, chromedp.WithLogf(log.Printf))
 	defer cancel()
 
 	var htmlPost []string
@@ -169,6 +170,7 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to extract content: %w", err)
 	}
 	if outputFile == "" {
+		// TODO: make this step to save in sqlite
 		log.Printf("Number of posts found: %d", len(result))
 		return nil
 	}
@@ -220,13 +222,4 @@ func loadCredentials() error {
 	}
 
 	return nil
-}
-
-// createBrowserOptions creates the browser options for chromedp
-func createBrowserOptions() []chromedp.ExecAllocatorOption {
-	headless := os.Getenv("HEADLESS") == "true"
-	return append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", headless),
-		chromedp.Flag("start-maximized", true),
-	)
 }
