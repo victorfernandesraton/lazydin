@@ -3,20 +3,22 @@ package main
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/chromedp/chromedp"
 	"github.com/gocarina/gocsv"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
 	"github.com/victorfernandesraton/lazydin/adapters"
 	"github.com/victorfernandesraton/lazydin/browser"
 	"github.com/victorfernandesraton/lazydin/config"
+	"github.com/victorfernandesraton/lazydin/storage"
 	"github.com/victorfernandesraton/lazydin/workflow"
 )
 
@@ -41,6 +43,9 @@ var (
 	configPath      string
 	credentialsFile string
 	configs         *config.Config
+	databse         *sql.DB
+	postsStore      *storage.PostStorage
+	authorStore     *storage.AuthorStorage
 )
 
 var rootCmd = &cobra.Command{
@@ -80,7 +85,21 @@ var createCredentials = &cobra.Command{
 	},
 }
 
+var createStorage = &cobra.Command{
+	Use:   "create-storage",
+	Short: "Start proccess to define path to storage file",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		reader := bufio.NewReader(os.Stdin)
+
+		fmt.Printf("Enter path: default %s", configs.SQlite)
+		sqlitePath, _ := reader.ReadString('\n')
+		return config.SetStorage(sqlitePath)
+
+	},
+}
+
 func init() {
+	var err error
 	rootCmd.PersistentFlags().StringP(flagConfig, "c", configPath, "Configguration path")
 	rootCmd.PersistentFlags().StringP(flagUser, "u", "", "Linkedin Username")
 	rootCmd.PersistentFlags().StringP(flagPassword, "p", "", "Linkedin Password")
@@ -93,24 +112,39 @@ func init() {
 	rootCmd.AddCommand(searchPostsCmd)
 	rootCmd.AddCommand(commentPostCmd)
 	rootCmd.AddCommand(createCredentials)
+	rootCmd.AddCommand(createStorage)
 
-	home, err := os.UserConfigDir()
+	configs, err = config.LoadConfig()
 	if err != nil {
 		log.Fatalf(err.Error())
 
 	}
-	configPath := filepath.Join(home, "lazydin", "config.toml")
-	configs, err = config.LoadConfig(configPath)
 
-	if err != nil {
-		log.Fatalf(err.Error())
-
-	}
 }
 
 func main() {
+	var err error
+	if _, err := os.Stat(configs.SQlite); os.IsNotExist(err) {
+		if _, err := os.Create(configs.SQlite); err != nil {
+			log.Fatalf(err.Error())
+		}
+	}
+	databse, err = sql.Open("sqlite3", configs.SQlite)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 
-	if err := rootCmd.Execute(); err != nil {
+	postsStore = storage.NewPostStorage(databse)
+	authorStore = storage.NewAuthorStorage(databse)
+	if err = authorStore.CreateTable(); err != nil {
+		log.Fatalf(err.Error())
+
+	}
+
+	if err = postsStore.CreateTable(); err != nil {
+		log.Fatalf(err.Error())
+	}
+	if err = rootCmd.Execute(); err != nil {
 		log.Fatalf(err.Error())
 	}
 }
@@ -164,6 +198,14 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to extract content: %w", err)
 	}
 	if outputFile == "" {
+		for _, v := range result {
+			if _, err := postsStore.Upsert(&v.Post); err != nil {
+				return err
+			}
+			if _, err := authorStore.Upsert(&v.Author); err != nil {
+				return err
+			}
+		}
 		// TODO: make this step to save in sqlite
 		log.Printf("Number of posts found: %d", len(result))
 		return nil
