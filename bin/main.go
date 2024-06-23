@@ -206,8 +206,6 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		}
-		// TODO: make this step to save in sqlite
-		log.Printf("Number of posts found: %d", len(result))
 		return nil
 	}
 	if !strings.HasSuffix(outputFile, ".csv") {
