@@ -49,7 +49,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "vagabot",
+	Use:   "lazydin",
 	Short: "CLI for interacting with Linkedin",
 }
 

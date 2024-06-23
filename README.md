@@ -2,7 +2,27 @@
 
 ## A tool for automatization boring stuff in linkedin
 
-A CLI based tool using chrome to avoid spent time in boring stuff while you search for jobs on linkedin
+CLI for interacting with Linkedin
+
+Usage:
+  lazydin [command]
+
+Available Commands:
+  completion         Generate the autocompletion script for the specified shell
+  create-credentials Start proccess to define credentials in config credentials file
+  create-storage     Start proccess to define path to storage file
+  help               Help about any command
+  post-comment       Post a comment on a Linkedin post
+  search-posts       Search for posts on Linkedin
+
+Flags:
+  -c, --config string        Configguration path
+      --credentials string   Credential file storage in toml
+  -h, --help                 help for lazydin
+  -p, --password string      Linkedin Password
+  -u, --user string          Linkedin Username
+
+Use "lazydin [command] --help" for more information about a command.
 
 ## Features
 
@@ -14,6 +34,9 @@ A CLI based tool using chrome to avoid spent time in boring stuff while you sear
 - Golang 1.20+
 - Google chrome or chromiun avaliable for current user and installs as normal host sofware (not support for flatpacks , distrobox , snap or any container format)
 
+## Before starting
+- Make sure your credntials is stored correctly and update with
+- Make sure you __disable__ MFA security in linkedin (but not forgot to put back when you finish)
 
 ### Warning
 
