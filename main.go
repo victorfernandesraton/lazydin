@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"github.com/gocarina/gocsv"
 	_ "github.com/mattn/go-sqlite3"
@@ -36,6 +37,7 @@ const (
 	flagDatabase           = "database"
 	flagUrl                = "url"
 	flagId                 = "id"
+	flagAction             = "action"
 	defaultDatabaseFile    = "lazydin.sqlite"
 	defaultCredentialsFile = "credentials.toml"
 	configUsername         = "username"
@@ -121,6 +123,7 @@ func init() {
 
 	followUserCmd.Flags().StringP(flagUrl, "", "", "valid profile url")
 	followUserCmd.Flags().IntP(flagId, "", 0, "valid author id")
+	followUserCmd.Flags().StringP(flagAction, "a", "Follow", "Action to execute")
 
 	rootCmd.AddCommand(searchPostsCmd)
 	rootCmd.AddCommand(commentPostCmd)
@@ -245,8 +248,8 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 // followUser is a function to using id from database or url to follow a linkedin user
 // this function handle for follow-user command
 func followUser(cmd *cobra.Command, args []string) error {
-	fmt.Println("This feature is under construction, please ignore it")
 	var user *domain.Author
+	buttons := make(map[string]*cdp.Node)
 	url, err := cmd.Flags().GetString(flagUrl)
 	if err != nil {
 		return fmt.Errorf("failed to get url flag: %w", err)
@@ -258,6 +261,11 @@ func followUser(cmd *cobra.Command, args []string) error {
 	}
 	if url == "" && userId == 0 {
 		return fmt.Errorf("neither url or id is availabe")
+	}
+	selectedAction, err := cmd.Flags().GetString(flagAction)
+	if err != nil {
+
+		return fmt.Errorf("failed to get action flag: %w", err)
 	}
 
 	if userId != 0 {
@@ -293,10 +301,28 @@ func followUser(cmd *cobra.Command, args []string) error {
 	}
 	for _, node := range availabeActions {
 		var text string
-		chromedp.Text(node, &text)
-		fmt.Println(text)
-		fmt.Println(node)
-	}
+		if err := chromedp.Run(ctx, chromedp.Text(node.FullXPath(), &text)); err != nil {
+			return err
+		}
 
+		buttons[text] = node.Parent
+	}
+	btnFollow, ok := buttons[selectedAction]
+
+	if !ok {
+		if _, ok := buttons["Unfollow"]; ok {
+			return fmt.Errorf("failed to follow user, you alredy follow")
+		}
+
+		if _, ok := buttons["Message"]; ok {
+			return fmt.Errorf("failed to follow user, you are mutual")
+		}
+
+		return fmt.Errorf("failed to follow user, not found %s button", selectedAction)
+
+	}
+	chromedp.Run(ctx,
+		chromedp.Click(btnFollow.FullXPath()),
+	)
 	return nil
 }
