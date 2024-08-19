@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"github.com/gocarina/gocsv"
 	_ "github.com/mattn/go-sqlite3"
@@ -111,7 +110,6 @@ var createStorage = &cobra.Command{
 }
 
 func init() {
-	var err error
 	rootCmd.PersistentFlags().StringP(flagConfig, "c", configPath, "Configguration path")
 	rootCmd.PersistentFlags().StringP(flagUser, "u", "", "Linkedin Username")
 	rootCmd.PersistentFlags().StringP(flagPassword, "p", "", "Linkedin Password")
@@ -131,16 +129,16 @@ func init() {
 	rootCmd.AddCommand(createStorage)
 	rootCmd.AddCommand(followUserCmd)
 
+}
+
+func main() {
+	var err error
+
 	configs, err = config.LoadConfig()
 	if err != nil {
 		log.Fatalf(err.Error())
 
 	}
-
-}
-
-func main() {
-	var err error
 	if _, err := os.Stat(configs.SQlite); os.IsNotExist(err) {
 		if _, err := os.Create(configs.SQlite); err != nil {
 			log.Fatalf(err.Error())
@@ -178,6 +176,10 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 	outputFile, err := cmd.Flags().GetString(flagOutput)
 	if err != nil {
 		return fmt.Errorf("failed to get output flag: %w", err)
+	}
+
+	if !strings.HasSuffix(outputFile, ".csv") && outputFile != "" {
+		return fmt.Errorf("invalid file format for output, got %v, but only supported is .csv", outputFile)
 	}
 
 	separator, err := cmd.Flags().GetString(flagSeparator)
@@ -222,10 +224,6 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		}
-		return nil
-	}
-	if !strings.HasSuffix(outputFile, ".csv") {
-		return fmt.Errorf("invalid file format for output, got %v, but only supported is .csv", outputFile)
 	}
 
 	file, err := os.Create(outputFile)
@@ -240,7 +238,7 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	csvWriter.Flush()
+	defer csvWriter.Flush()
 
 	return nil
 }
@@ -249,7 +247,6 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 // this function handle for follow-user command
 func followUser(cmd *cobra.Command, args []string) error {
 	var user *domain.Author
-	buttons := make(map[string]*cdp.Node)
 	url, err := cmd.Flags().GetString(flagUrl)
 	if err != nil {
 		return fmt.Errorf("failed to get url flag: %w", err)
@@ -294,35 +291,9 @@ func followUser(cmd *cobra.Command, args []string) error {
 	); err != nil {
 		return fmt.Errorf("failed to execute chromedp tasks: %w", err)
 	}
-
-	availabeActions, err := workflow.ExtractPriofileActions(ctx)
-	if err != nil {
+	if err := workflow.ExecuteFollowAction(ctx, selectedAction); err != nil {
 		return err
 	}
-	for _, node := range availabeActions {
-		var text string
-		if err := chromedp.Run(ctx, chromedp.Text(node.FullXPath(), &text)); err != nil {
-			return err
-		}
 
-		buttons[text] = node.Parent
-	}
-	btnFollow, ok := buttons[selectedAction]
-
-	if !ok {
-		if _, ok := buttons["Unfollow"]; ok {
-			return fmt.Errorf("failed to follow user, you alredy follow")
-		}
-
-		if _, ok := buttons["Message"]; ok {
-			return fmt.Errorf("failed to follow user, you are mutual")
-		}
-
-		return fmt.Errorf("failed to follow user, not found %s button", selectedAction)
-
-	}
-	chromedp.Run(ctx,
-		chromedp.Click(btnFollow.FullXPath()),
-	)
 	return nil
 }

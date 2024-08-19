@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
@@ -74,4 +75,40 @@ func ExtractPriofileActions(ctx context.Context) ([]*cdp.Node, error) {
 		return nil, err
 	}
 	return nodes, nil
+
+}
+
+func ExecuteFollowAction(ctx context.Context, selectedAction string) error {
+	buttons := make(map[string]*cdp.Node)
+	nodes, err := ExtractPriofileActions(ctx)
+	if err != nil {
+		return err
+	}
+	for _, node := range nodes {
+		var text string
+		if err := chromedp.Run(ctx, chromedp.Text(node.FullXPath(), &text)); err != nil {
+			return err
+		}
+
+		buttons[text] = node.Parent
+	}
+	btnFollow, ok := buttons[selectedAction]
+
+	if !ok {
+		if _, ok := buttons["Unfollow"]; ok {
+			return fmt.Errorf("failed to follow user, you alredy follow")
+		}
+
+		if _, ok := buttons["Message"]; ok {
+			return fmt.Errorf("failed to follow user, you are mutual")
+		}
+
+		return fmt.Errorf("failed to follow user, not found %s button", selectedAction)
+
+	}
+	chromedp.Run(ctx,
+		chromedp.Click(btnFollow.FullXPath()),
+	)
+
+	return nil
 }
