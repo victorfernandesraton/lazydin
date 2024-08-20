@@ -21,6 +21,12 @@ type Author struct {
 	UpdatedAt   time.Time `csv:"-"`
 }
 
+type Relationship struct {
+	AuthorId uint64 `csv:"author_id"`
+	Relation string `csv:"relation"`
+	Mutuals  bool   `csv:"mutuals"`
+}
+
 type Content struct {
 	Post   Post   `csv:"post"`
 	Author Author `csv:"author"`
