@@ -224,21 +224,22 @@ func searchPosts(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		}
-	}
+	} else {
+		file, err := os.Create(outputFile)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		csvWriter := csv.NewWriter(file)
+		runeSeparator := []rune(separator)
+		csvWriter.Comma = runeSeparator[0]
+		err = gocsv.MarshalCSV(&result, csvWriter)
+		if err != nil {
+			return err
+		}
+		defer csvWriter.Flush()
 
-	file, err := os.Create(outputFile)
-	if err != nil {
-		return err
 	}
-	defer file.Close()
-	csvWriter := csv.NewWriter(file)
-	runeSeparator := []rune(separator)
-	csvWriter.Comma = runeSeparator[0]
-	err = gocsv.MarshalCSV(&result, csvWriter)
-	if err != nil {
-		return err
-	}
-	defer csvWriter.Flush()
 
 	return nil
 }
