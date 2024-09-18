@@ -8,12 +8,14 @@ Usage:
   lazydin [command]
 
 Available Commands:
+  comment            Post a comment on a Linkedin post
   completion         Generate the autocompletion script for the specified shell
   create-credentials Start proccess to define credentials in config credentials file
   create-storage     Start proccess to define path to storage file
+  follow             Follow specific user By id or url
   help               Help about any command
-  post-comment       Post a comment on a Linkedin post
-  search-posts       Search for posts on Linkedin
+  prospect           UNDER CONSTRUCTION Prospect about some post/job with the author
+  search             Search for posts on Linkedin
 
 Flags:
   -c, --config string        Configguration path
@@ -21,8 +23,6 @@ Flags:
   -h, --help                 help for lazydin
   -p, --password string      Linkedin Password
   -u, --user string          Linkedin Username
-
-Use "lazydin [command] --help" for more information about a command.
 
 ## Features
 
