@@ -57,55 +57,60 @@ var rootCmd = &cobra.Command{
 	Short: "CLI for interacting with Linkedin",
 }
 
-var searchPostsCmd = &cobra.Command{
-	Use:   "search-posts",
-	Short: "Search for posts on Linkedin",
-	RunE:  searchPosts,
-}
-
-var followUserCmd = &cobra.Command{
-	Use:     "follow-user",
-	Short:   "UNDER CONSTRUCTION Follow specific user By id or url",
-	Example: "follow-user [--id integer | --url user linkedin profile urls]",
-	RunE:    followUser,
-}
-
-var commentPostCmd = &cobra.Command{
-	Use:   "post-comment",
-	Short: "Post a comment on a Linkedin post",
-	Run: func(cmd *cobra.Command, args []string) {
-		log.Fatal(errors.New("not implemented yet"))
+var commands = []cobra.Command{
+	{
+		Use:   "search",
+		Short: "Search for posts on Linkedin",
+		RunE:  searchPosts,
+	}, {
+		Use:     "follow",
+		Short:   "Follow specific user By id or url",
+		Example: "follow [--id integer | --url user linkedin profile urls]",
+		RunE:    followUser,
 	},
-}
-
-var createCredentials = &cobra.Command{
-	Use:   "create-credentials",
-	Short: "Start proccess to define credentials in config credentials file",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		reader := bufio.NewReader(os.Stdin)
-
-		fmt.Print("Enter username: ")
-		username, _ := reader.ReadString('\n')
-		username = strings.TrimSpace(username)
-
-		fmt.Print("Enter password: ")
-		password, _ := reader.ReadString('\n')
-		password = strings.TrimSpace(password)
-		return config.SetCredentials(username, password)
-
+	{
+		Use:   "prospect",
+		Short: "UNDER CONSTRUCTION Prospect about some post/job with the author",
+		Run: func(cmd *cobra.Command, args []string) {
+			log.Fatal(errors.New("not implemented yet"))
+		},
 	},
-}
 
-var createStorage = &cobra.Command{
-	Use:   "create-storage",
-	Short: "Start proccess to define path to storage file",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		reader := bufio.NewReader(os.Stdin)
+	{
+		Use:   "comment",
+		Short: "Post a comment on a Linkedin post",
+		Run: func(cmd *cobra.Command, args []string) {
+			log.Fatal(errors.New("not implemented yet"))
+		},
+	},
+	{
+		Use:   "create-credentials",
+		Short: "Start proccess to define credentials in config credentials file",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			reader := bufio.NewReader(os.Stdin)
 
-		fmt.Printf("Enter path: default %s", configs.SQlite)
-		sqlitePath, _ := reader.ReadString('\n')
-		return config.SetStorage(sqlitePath)
+			fmt.Print("Enter username: ")
+			username, _ := reader.ReadString('\n')
+			username = strings.TrimSpace(username)
 
+			fmt.Print("Enter password: ")
+			password, _ := reader.ReadString('\n')
+			password = strings.TrimSpace(password)
+			return config.SetCredentials(username, password)
+
+		},
+	},
+	{
+		Use:   "create-storage",
+		Short: "Start proccess to define path to storage file",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			reader := bufio.NewReader(os.Stdin)
+
+			fmt.Printf("Enter path: default %s", configs.SQlite)
+			sqlitePath, _ := reader.ReadString('\n')
+			return config.SetStorage(sqlitePath)
+
+		},
 	},
 }
 
@@ -115,19 +120,17 @@ func init() {
 	rootCmd.PersistentFlags().StringP(flagPassword, "p", "", "Linkedin Password")
 	rootCmd.PersistentFlags().String(flagCredentials, credentialsFile, "Credential file storage in toml")
 
-	searchPostsCmd.Flags().StringP(flagQuery, "q", "", "Query for search post")
-	searchPostsCmd.Flags().StringP(flagOutput, "o", "", "Output file as csv")
-	searchPostsCmd.Flags().StringP(flagSeparator, "", ";", "Output file as csv separator")
+	commands[0].Flags().StringP(flagQuery, "q", "", "Query for search post")
+	commands[0].Flags().StringP(flagOutput, "o", "", "Output file as csv")
+	commands[0].Flags().StringP(flagSeparator, "", ";", "Output file as csv separator")
 
-	followUserCmd.Flags().StringP(flagUrl, "", "", "valid profile url")
-	followUserCmd.Flags().IntP(flagId, "", 0, "valid author id")
-	followUserCmd.Flags().StringP(flagAction, "a", "Follow", "Action to execute")
+	commands[1].Flags().StringP(flagUrl, "", "", "valid profile url")
+	commands[1].Flags().IntP(flagId, "", 0, "valid author id")
+	commands[1].Flags().StringP(flagAction, "a", "Follow", "Action to execute")
 
-	rootCmd.AddCommand(searchPostsCmd)
-	rootCmd.AddCommand(commentPostCmd)
-	rootCmd.AddCommand(createCredentials)
-	rootCmd.AddCommand(createStorage)
-	rootCmd.AddCommand(followUserCmd)
+	for _, cmd := range commands {
+		rootCmd.AddCommand(&cmd)
+	}
 
 }
 
