@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/chromedp/chromedp"
 	"github.com/victorfernandesraton/lazydin/adapters"
@@ -84,7 +85,42 @@ func searchPosts(w http.ResponseWriter, r *http.Request) {
 
 		}
 	}
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("OK"))
+}
+
+func getPosts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	posts, err := postsStore.GetAllPosts()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(posts)
+}
+
+func updateUserConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req config.CredentialsConfig
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if err := config.SetCredentials(req.Username, req.Password); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("OK"))
 }
 
@@ -95,6 +131,11 @@ func main() {
 		panic(err)
 	}
 
+	if _, err := os.Stat(configs.SQlite); os.IsNotExist(err) {
+		if _, err := os.Create(configs.SQlite); err != nil {
+			panic(err)
+		}
+	}
 	databse, err = sql.Open("sqlite3", configs.SQlite)
 	if err != nil {
 		panic(err)
@@ -107,10 +148,12 @@ func main() {
 
 	postsStore = storage.NewPostStorage(databse)
 	if err = postsStore.CreateTable(); err != nil {
-		log.Fatalf(err.Error())
+		panic(err)
 	}
 
 	http.HandleFunc("/search", searchPosts)
+	http.HandleFunc("/posts", getPosts)
+	http.HandleFunc("/config/credentials", updateUserConfig)
 	http.ListenAndServe(":8080", nil)
 
 }

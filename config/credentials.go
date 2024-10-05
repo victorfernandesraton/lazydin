@@ -13,8 +13,8 @@ const (
 
 // CredentialsConfig holds the credentials for the application
 type CredentialsConfig struct {
-	Username string `mapstructure:"username"`
-	Password string `mapstructure:"password"`
+	Username string `mapstructure:"username" json:"username"`
+	Password string `mapstructure:"password" json:"password"`
 }
 
 type Credentials struct {

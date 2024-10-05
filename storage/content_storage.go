@@ -41,8 +41,6 @@ func (store *ContentStorage) UpsertPostsAndAuthors(content []domain.Content) err
         INSERT INTO authors (url, name, description)
         VALUES (?, ?, ?)
         ON CONFLICT(url) DO UPDATE SET
-        name = excluded.name,
-        description = excluded.description,
         updated_at = CURRENT_TIMESTAMP;
         `
 		res, err := tx.Exec(upsertAuthorStmt, author.Url, author.Name, author.Description)
@@ -80,8 +78,6 @@ func (store *ContentStorage) UpsertPostsAndAuthors(content []domain.Content) err
         INSERT INTO posts (url, content, author_id)
         VALUES (?, ?, ?)
         ON CONFLICT(url) DO UPDATE SET
-        content = excluded.content,
-        author_id = excluded.author_id,
         updated_at = CURRENT_TIMESTAMP;
         `
 		_, err := tx.Exec(upsertPostStmt, item.Post.Url, item.Post.Content, authorID)
