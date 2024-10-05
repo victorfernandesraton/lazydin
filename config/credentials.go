@@ -34,18 +34,24 @@ func SetCredentials(username, password string) error {
 	return viper.WriteConfig()
 }
 
+func GetCredentials(config *Config) *Credentials {
+	return &Credentials{
+		Username: viper.GetString(configUsername),
+		Password: viper.GetString(configPassword),
+	}
+}
+
 // LoadCredentials loads the Linkedin credentials from environment variables or flags
 func LoadCredentials(config *Config, flagUsername, flagPassword string) (*Credentials, error) {
-	envUsername := config.Credentials.Username
-	envPassword := config.Credentials.Password
-
-	if flagUsername != "" {
-		envUsername = flagUsername
+	var credentials *Credentials
+	if flagUsername == "" && flagPassword == "" {
+		credentials = GetCredentials(config)
+	} else {
+		credentials = &Credentials{
+			Username: flagUsername,
+			Password: flagPassword,
+		}
 	}
-	if flagPassword != "" {
-		envPassword = flagPassword
-	}
-	credentials := &Credentials{Username: envUsername, Password: envPassword}
 
 	if credentials.Username == "" || credentials.Password == "" {
 		return nil, errors.New(
