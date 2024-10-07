@@ -29,11 +29,25 @@ func TestAuthorStorage(t *testing.T) {
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
-		if author.ID != 1 {
-			t.Fatalf("Author shoud be using id 1")
-		}
 
 		if author.Url != "some-url" {
+			t.Fatalf("Author url error, expect %s, got %s", "some-url", author.Url)
+		}
+		if author.Name != "Victor Raton" {
+			t.Fatalf("Author url error, expect %s, got %s", "Victor Raton", author.Name)
+		}
+	})
+
+	t.Run("create other author", func(t *testing.T) {
+		author := &domain.Author{
+			Url: "some-other", Name: "Victor Raton",
+		}
+		author, err := authorStorage.Upsert(author)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		if author.Url != "some-other" {
 			t.Fatalf("Author url error, expect %s, got %s", "some-url", author.Url)
 		}
 		if author.Name != "Victor Raton" {
@@ -49,9 +63,6 @@ func TestAuthorStorage(t *testing.T) {
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
-		if author.ID != 1 {
-			t.Fatalf("Author shoud be using id 1")
-		}
 		if author.Url != "some-url" {
 			t.Fatalf("Author url error, expect %s, got %s", "some-url", author.Url)
 		}
@@ -65,8 +76,8 @@ func TestAuthorStorage(t *testing.T) {
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
-		if author.ID != 1 {
-			t.Fatalf("Author shoud be using id 1")
+		if author.Url != "some-url" {
+			t.Fatalf("Author shoud be using url some-url")
 		}
 	})
 

@@ -20,7 +20,10 @@ const (
 	upsertAuthorQuery = `
 		INSERT INTO authors (url, name, description) 
 		VALUES (?, ?, ?)
-		ON CONFLICT(url) DO UPDATE SET  updated_at=CURRENT_TIMESTAMP
+		ON CONFLICT(url) DO UPDATE SET 
+			name=excluded.name,  
+			updated_at=CURRENT_TIMESTAMP,
+			description=excluded.description
 		RETURNING url;
 	`
 

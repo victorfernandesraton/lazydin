@@ -22,17 +22,16 @@ const (
 	upsertPostQuery = `
 		INSERT INTO posts (url, content, author_url) 
 		VALUES (?, ?, ?)
-		ON CONFLICT(url) DO UPDATE SET updated_at=CURRENT_TIMESTAMP
+		ON CONFLICT(url) DO UPDATE SET 
+		 	content=excluded.content,
+			author_url=excluded.author_url,
+			updated_at=CURRENT_TIMESTAMP
 		RETURNING url;
 	`
 
 	selectPostsQuery = `
             SELECT url, content, author_url, created_at, updated_at FROM posts;
         `
-
-	selectPostByIdQuery = `
-		SELECT url, content, author_url, created_at, updated_at FROM posts WHERE id = ?;
-	`
 
 	selectPostByUrlQuery = `
 		SELECT url, content, author_url, created_at, updated_at FROM posts WHERE url = ?;
