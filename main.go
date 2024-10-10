@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/victorfernandesraton/lazydin/browser"
 	"github.com/victorfernandesraton/lazydin/config"
 	"github.com/victorfernandesraton/lazydin/domain"
+	"github.com/victorfernandesraton/lazydin/server"
 	"github.com/victorfernandesraton/lazydin/storage"
 	"github.com/victorfernandesraton/lazydin/workflow"
 )
@@ -35,8 +37,8 @@ const (
 	flagCredentials        = "credentials"
 	flagDatabase           = "database"
 	flagUrl                = "url"
-	flagId                 = "id"
 	flagAction             = "action"
+	flagPort               = "port"
 	defaultDatabaseFile    = "lazydin.sqlite"
 	defaultCredentialsFile = "credentials.toml"
 	configUsername         = "username"
@@ -112,6 +114,47 @@ var commands = []cobra.Command{
 
 		},
 	},
+	{
+		Use:     "server",
+		Short:   "Start server",
+		Example: "server [--port integer ]",
+		Run: func(cmd *cobra.Command, args []string) {
+
+			port, err := cmd.Flags().GetInt(flagPort)
+			if err != nil {
+				panic(err)
+			}
+			configs, err := config.LoadConfig()
+			if err != nil {
+				panic(err)
+			}
+
+			if _, err := os.Stat(configs.SQlite); os.IsNotExist(err) {
+				if _, err := os.Create(configs.SQlite); err != nil {
+					panic(err)
+				}
+			}
+			databse, err = sql.Open("sqlite3", configs.SQlite)
+			if err != nil {
+				panic(err)
+			}
+			authorStore = storage.NewAuthorStorage(databse)
+			if err = authorStore.CreateTable(); err != nil {
+				panic(err)
+
+			}
+
+			postsStore = storage.NewPostStorage(databse)
+			if err = postsStore.CreateTable(); err != nil {
+				panic(err)
+			}
+
+			http.HandleFunc("/search", server.SearchPostsInLinkedin)
+			http.HandleFunc("/posts", server.GetPosts)
+			http.HandleFunc("/config/credentials", server.UpdateUserConfig)
+			http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+		},
+	},
 }
 
 func init() {
@@ -125,8 +168,8 @@ func init() {
 	commands[0].Flags().StringP(flagSeparator, "", ";", "Output file as csv separator")
 
 	commands[1].Flags().StringP(flagUrl, "", "", "valid profile url")
-	commands[1].Flags().IntP(flagId, "", 0, "valid author id")
 	commands[1].Flags().StringP(flagAction, "a", "Follow", "Action to execute")
+	commands[6].Flags().IntP(flagPort, "", 8081, "Port for server")
 
 	for _, cmd := range commands {
 		rootCmd.AddCommand(&cmd)
@@ -256,27 +299,13 @@ func followUser(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get url flag: %w", err)
 	}
 
-	userId, err := cmd.Flags().GetInt(flagId)
-	if err != nil {
-		return fmt.Errorf("failed to get id flag: %w", err)
-	}
-	if url == "" && userId == 0 {
-		return fmt.Errorf("neither url or id is availabe")
-	}
 	selectedAction, err := cmd.Flags().GetString(flagAction)
 	if err != nil {
 
 		return fmt.Errorf("failed to get action flag: %w", err)
 	}
 
-	if userId != 0 {
-		user, err = authorStore.GetById(uint64(userId))
-		if err != nil {
-			return err
-		}
-	} else {
-		user = &domain.Author{Url: url}
-	}
+	user = &domain.Author{Url: url}
 	usernameFlag := rootCmd.PersistentFlags().Lookup(flagUser).Value.String()
 	passwordFlag := rootCmd.PersistentFlags().Lookup(flagPassword).Value.String()
 	credentials, err := config.LoadCredentials(configs, usernameFlag, passwordFlag)

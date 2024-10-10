@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/chromedp/chromedp"
 	"github.com/victorfernandesraton/lazydin/adapters"
@@ -29,11 +28,7 @@ type FindJobPost struct {
 	Query string `json:"query"`
 }
 
-type GetAllPosts struct {
-	Posts []domain.Post `json:"posts"`
-}
-
-func searchPosts(w http.ResponseWriter, r *http.Request) {
+func SearchPostsInLinkedin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -94,20 +89,44 @@ func searchPosts(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func getPosts(w http.ResponseWriter, r *http.Request) {
+func GetPosts(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	posts, err := postsStore.GetAllPosts()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	var posts []domain.Post
+	var err error
+	authorName := r.URL.Query().Get("author_name")
+	authorUrl := r.URL.Query().Get("author_url")
+	if authorName != "" && authorUrl != "" {
+		http.Error(w, "Invalid query params, using author_name or author_url", http.StatusBadRequest)
 		return
 	}
+
+	if authorName == "" && authorUrl == "" {
+		posts, err = postsStore.GetAllPosts()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else if authorName != "" {
+		posts, err = postsStore.GetAllPostsByAuthorName(authorName)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else if authorUrl != "" {
+		posts, err = postsStore.GetAllPostsByAuthorUrl(authorUrl)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	json.NewEncoder(w).Encode(posts)
 }
 
-func updateUserConfig(w http.ResponseWriter, r *http.Request) {
+func UpdateUserConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -127,38 +146,4 @@ func updateUserConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("OK"))
-}
-
-func main() {
-
-	configs, err := config.LoadConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	if _, err := os.Stat(configs.SQlite); os.IsNotExist(err) {
-		if _, err := os.Create(configs.SQlite); err != nil {
-			panic(err)
-		}
-	}
-	databse, err = sql.Open("sqlite3", configs.SQlite)
-	if err != nil {
-		panic(err)
-	}
-	authorStore = storage.NewAuthorStorage(databse)
-	if err = authorStore.CreateTable(); err != nil {
-		panic(err)
-
-	}
-
-	postsStore = storage.NewPostStorage(databse)
-	if err = postsStore.CreateTable(); err != nil {
-		panic(err)
-	}
-
-	http.HandleFunc("/search", searchPosts)
-	http.HandleFunc("/posts", getPosts)
-	http.HandleFunc("/config/credentials", updateUserConfig)
-	http.ListenAndServe(":8080", nil)
-
 }
