@@ -12,6 +12,7 @@ import (
 	"github.com/victorfernandesraton/lazydin/adapters"
 	"github.com/victorfernandesraton/lazydin/browser"
 	"github.com/victorfernandesraton/lazydin/config"
+	"github.com/victorfernandesraton/lazydin/domain"
 	"github.com/victorfernandesraton/lazydin/storage"
 	"github.com/victorfernandesraton/lazydin/workflow"
 
@@ -26,6 +27,10 @@ var databse *sql.DB
 
 type FindJobPost struct {
 	Query string `json:"query"`
+}
+
+type GetAllPosts struct {
+	Posts []domain.Post `json:"posts"`
 }
 
 func searchPosts(w http.ResponseWriter, r *http.Request) {

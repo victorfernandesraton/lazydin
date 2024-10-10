@@ -33,6 +33,21 @@ const (
             SELECT url, content, author_url, created_at, updated_at FROM posts;
         `
 
+	selectPostsQueryByAuthorUrl = `
+            SELECT url, content, author_url, created_at, updated_at FROM posts WHERE author_url = ?;
+        `
+	selectPostsQueryByAuthorNameLike = `
+            SELECT
+                    p.url,
+                    p.content,
+                    p.author_url,
+                    p.created_at,
+                    p.updated_at
+            FROM
+                    posts p
+            INNER JOIN authors a ON
+                    a.url = p.author_url
+            WHERE a.name LIKE $1`
 	selectPostByUrlQuery = `
 		SELECT url, content, author_url, created_at, updated_at FROM posts WHERE url = ?;
 	`
@@ -88,4 +103,46 @@ func (ps *PostStorage) GetByUrl(url string) (*domain.Post, error) {
 		return nil, err
 	}
 	return &post, nil
+}
+
+func (ps *PostStorage) GetAllPostsByAuthorUrl(url string) ([]domain.Post, error) {
+
+	var posts []domain.Post
+	rows, err := ps.db.Query(selectPostsQueryByAuthorUrl, url)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var post domain.Post
+		err = rows.Scan(&post.Url, &post.Content, &post.AuthorUrl, &post.CreatedAt, &post.UpdatedAt)
+		log.Println(err)
+		if err != nil {
+			return nil, err
+		}
+		log.Println(post)
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
+func (ps *PostStorage) GetAllPostsByAuthorName(name string) ([]domain.Post, error) {
+	var posts []domain.Post
+	rows, err := ps.db.Query(selectPostsQueryByAuthorNameLike, "%"+name+"%")
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var post domain.Post
+		err = rows.Scan(&post.Url, &post.Content, &post.AuthorUrl, &post.CreatedAt, &post.UpdatedAt)
+		log.Println(err)
+		if err != nil {
+			return nil, err
+		}
+		log.Println(post)
+		posts = append(posts, post)
+	}
+	return posts, nil
 }
