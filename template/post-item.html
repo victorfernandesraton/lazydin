@@ -1,7 +1,7 @@
 {{define "post-item"}}
 <a href="/post/{{ .Url }}">{{ .Url }}</a>
 <p>{{ .Content }}</p>
-<div hx-get="/authors/{{ .AuthorUrl }}" hx-target="this" hx-trigger="load">
+<div hx-get="/author/{{ .AuthorUrl }}" hx-target="this" hx-trigger="load">
     {{template "author-item"}}
 </div>
 {{end}}

@@ -35,14 +35,13 @@ func SearchPostsInLinkedin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	var req FindJobPost
-	// Decode JSON body
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
-	if req.Query == "" {
+	query := r.Form.Get("query")
+	if query == "" {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -57,7 +56,7 @@ func SearchPostsInLinkedin(w http.ResponseWriter, r *http.Request) {
 	Configs, err := config.LoadConfig()
 	credentials := config.GetCredentials(Configs)
 	if err := chromedp.Run(ctx,
-		workflow.Auth(credentials.Username, credentials.Password), workflow.SearchForPosts(req.Query),
+		workflow.Auth(credentials.Username, credentials.Password), workflow.SearchForPosts(query),
 	); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -189,7 +188,6 @@ func GetAuthorByUrl(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = Tmpl.ExecuteTemplate(w, "author-item.html", author)
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

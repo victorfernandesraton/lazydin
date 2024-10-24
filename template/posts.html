@@ -24,6 +24,11 @@
         <input id="authorName" type="search" name="author_name" placeholder="Search by author...">
         <button type="submit">Search</button>
     </form>
+    <form hx-post="/search" hx-target="#posts" hx-swap="innerHTML" hx-encode="json">
+        <label for="query">Search for new posts:</label>
+        <input id="query" type="search" name="query">
+        <button type="submit">Search</button>
+    </form>
     <ul id="posts">
         {{ range . }}
         {{template "post-item" .}}

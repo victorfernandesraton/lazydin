@@ -135,8 +135,8 @@ var commands = []cobra.Command{
 			http.HandleFunc("/search", server.SearchPostsInLinkedin)
 			http.HandleFunc("/posts", server.GetPosts)
 			http.HandleFunc("/config/credentials", server.UpdateUserConfig)
-			http.HandleFunc("/author", server.GetAuthorByUrl)
-			http.HandleFunc("/author/{author_url}", server.GetAuthors)
+			http.HandleFunc("/authors", server.GetAuthors)
+			http.HandleFunc("/author/{author_url}", server.GetAuthorByUrl)
 			http.HandleFunc("/", server.GetIndex)
 			http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 		},

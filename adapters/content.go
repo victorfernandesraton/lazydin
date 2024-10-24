@@ -21,10 +21,13 @@ func ExtractAuthor(dom *goquery.Document) (*domain.Author, error) {
 	if !hasUrl {
 		return nil, nil
 	}
+
+	urlUser := strings.Split(url, "?")[0]
+	path := strings.Split(urlUser, "/in/")[1]
 	author := &domain.Author{
 		Name:        dom.Find(author_name).First().Text(),
 		Description: dom.Find(author_description).First().Text(),
-		Url:         url,
+		Url:         path,
 	}
 	return author, nil
 }
