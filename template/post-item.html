@@ -2,6 +2,6 @@
 <a href="/post/{{ .Url }}">{{ .Url }}</a>
 <p>{{ .Content }}</p>
 <div hx-get="/author/{{ .AuthorUrl }}" hx-target="this" hx-trigger="load">
-    {{template "author-item"}}
+    <p> Carregando autor...</p>
 </div>
 {{end}}

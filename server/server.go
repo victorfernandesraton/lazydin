@@ -90,6 +90,29 @@ func SearchPostsInLinkedin(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+func GetPostByUrl(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	url := r.PathValue("post_url")
+	if url == "" {
+		http.Error(w, "Invalid request slug", http.StatusBadRequest)
+		return
+	}
+
+	post, err := PostsStore.GetByUrl(url)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = Tmpl.ExecuteTemplate(w, "post-item.html", post)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func GetPosts(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -187,7 +210,7 @@ func GetAuthorByUrl(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = Tmpl.ExecuteTemplate(w, "author-item.html", author)
+	err = Tmpl.ExecuteTemplate(w, "author-single.html", author)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

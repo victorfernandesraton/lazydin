@@ -1,4 +1,7 @@
 {{define "author-item"}}
-<a href="/author/{{ .Url }}">{{ .Name }}</a>
-<a href="{{ .Url }}">Ver no linkedin</a>
+<div>
+    <a href="/author/{{ .Url }}">{{ .Name }}</a>
+    <a href="{{ .Url }}">Ver no linkedin</a>
+    <p>{{ .Description }}</p>
+</div>
 {{end}}
