@@ -2,7 +2,7 @@ package storage
 
 import (
 	"database/sql"
-	"log"
+	"time"
 
 	"github.com/victorfernandesraton/lazydin/domain"
 )
@@ -45,8 +45,7 @@ const (
                     p.updated_at
             FROM
                     posts p
-            INNER JOIN authors a ON
-                    a.url = p.author_url
+            INNER JOIN authors a ON a.url = p.author_url
             WHERE a.name LIKE $1`
 	selectPostByUrlQuery = `
 		SELECT url, content, author_url, created_at, updated_at FROM posts WHERE url = ?;
@@ -78,18 +77,27 @@ func (ps *PostStorage) Upsert(post *domain.Post) (*domain.Post, error) {
 func (ps *PostStorage) GetAllPosts() ([]domain.Post, error) {
 	var posts []domain.Post
 	rows, err := ps.db.Query(selectPostsQuery)
+
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var CreatedAt string
+		var UpdatedAt string
 		var post domain.Post
-		err = rows.Scan(&post.Url, &post.Content, &post.AuthorUrl, &post.CreatedAt, &post.UpdatedAt)
-		log.Println(err)
+		err = rows.Scan(&post.Url, &post.Content, &post.AuthorUrl, &CreatedAt, &UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
-		log.Println(post)
+		post.CreatedAt, err = time.Parse(time.RFC3339, CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		post.UpdatedAt, err = time.Parse(time.RFC3339, UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
 		posts = append(posts, post)
 	}
 	return posts, nil
@@ -116,11 +124,9 @@ func (ps *PostStorage) GetAllPostsByAuthorUrl(url string) ([]domain.Post, error)
 	for rows.Next() {
 		var post domain.Post
 		err = rows.Scan(&post.Url, &post.Content, &post.AuthorUrl, &post.CreatedAt, &post.UpdatedAt)
-		log.Println(err)
 		if err != nil {
 			return nil, err
 		}
-		log.Println(post)
 		posts = append(posts, post)
 	}
 	return posts, nil
@@ -137,11 +143,9 @@ func (ps *PostStorage) GetAllPostsByAuthorName(name string) ([]domain.Post, erro
 	for rows.Next() {
 		var post domain.Post
 		err = rows.Scan(&post.Url, &post.Content, &post.AuthorUrl, &post.CreatedAt, &post.UpdatedAt)
-		log.Println(err)
 		if err != nil {
 			return nil, err
 		}
-		log.Println(post)
 		posts = append(posts, post)
 	}
 	return posts, nil

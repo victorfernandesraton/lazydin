@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+
+</head>
+<script>
+    htmx.config({
+        "get": {
+            "headers": {
+                "Accept": "text/html"
+            }
+        }
+    });
+</script>
+
+<body>
+    <form hx-get="/authors" hx-target="#authors" hx-swap="innerHTML">
+        <label for="name">Search by author:</label>
+        <input id="name" type="search" name="name" placeholder="Search by author...">
+        <button type="submit">Search</button>
+    </form>
+    <ul id="authors">
+        {{ range . }}
+        {{template "author-item" .}}
+        {{ end }}
+    </ul>
+</body>
+
+</html>

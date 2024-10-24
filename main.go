@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -120,38 +121,23 @@ var commands = []cobra.Command{
 		Example: "server [--port integer ]",
 		Run: func(cmd *cobra.Command, args []string) {
 
+			tmpl := template.Must(template.ParseGlob("template/*.html"))
 			port, err := cmd.Flags().GetInt(flagPort)
 			if err != nil {
 				panic(err)
 			}
-			configs, err := config.LoadConfig()
-			if err != nil {
-				panic(err)
-			}
 
-			if _, err := os.Stat(configs.SQlite); os.IsNotExist(err) {
-				if _, err := os.Create(configs.SQlite); err != nil {
-					panic(err)
-				}
-			}
-			databse, err = sql.Open("sqlite3", configs.SQlite)
-			if err != nil {
-				panic(err)
-			}
-			authorStore = storage.NewAuthorStorage(databse)
-			if err = authorStore.CreateTable(); err != nil {
-				panic(err)
-
-			}
-
-			postsStore = storage.NewPostStorage(databse)
-			if err = postsStore.CreateTable(); err != nil {
-				panic(err)
-			}
+			server.AuthorStore = authorStore
+			server.PostsStore = postsStore
+			server.Configs = configs
+			server.Tmpl = tmpl
 
 			http.HandleFunc("/search", server.SearchPostsInLinkedin)
 			http.HandleFunc("/posts", server.GetPosts)
 			http.HandleFunc("/config/credentials", server.UpdateUserConfig)
+			http.HandleFunc("/author", server.GetAuthorByUrl)
+			http.HandleFunc("/author/{author_url}", server.GetAuthors)
+			http.HandleFunc("/", server.GetIndex)
 			http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 		},
 	},
@@ -181,6 +167,7 @@ func main() {
 	var err error
 
 	configs, err = config.LoadConfig()
+
 	if err != nil {
 		log.Fatalf(err.Error())
 

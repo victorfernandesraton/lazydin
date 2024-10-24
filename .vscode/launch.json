@@ -11,6 +11,15 @@
                 "-q",
                 "\"Job + Python + Mid\""
             ]
+        },
+        {
+            "name": "Launch Package: server",
+            "type": "go",
+            "request": "launch",
+            "program": "main.go",
+            "args": [
+                "server"
+            ]
         }
     ]
 }
