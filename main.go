@@ -53,6 +53,7 @@ var (
 	databse         *sql.DB
 	postsStore      *storage.PostStorage
 	authorStore     *storage.AuthorStorage
+	taskStore       *storage.TaskStorage
 )
 
 var rootCmd = &cobra.Command{
@@ -129,6 +130,7 @@ var commands = []cobra.Command{
 
 			server.AuthorStore = authorStore
 			server.PostsStore = postsStore
+			server.TaskStore = taskStore
 			server.Configs = configs
 			server.Tmpl = tmpl
 			log.Println(fmt.Sprintf("Starting server on port http://127.0.0.1:%d", port))
@@ -185,14 +187,8 @@ func main() {
 
 	postsStore = storage.NewPostStorage(databse)
 	authorStore = storage.NewAuthorStorage(databse)
-	if err = authorStore.CreateTable(); err != nil {
-		log.Fatalf(err.Error())
-
-	}
-
-	if err = postsStore.CreateTable(); err != nil {
-		log.Fatalf(err.Error())
-	}
+	taskStore = storage.NewTaskStorage(databse)
+	storage.CreateAllTables([]storage.Storage{postsStore, authorStore, taskStore})
 	if err = rootCmd.Execute(); err != nil {
 		log.Fatalf(err.Error())
 	}

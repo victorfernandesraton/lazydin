@@ -23,6 +23,7 @@ import (
 var Configs *config.Config
 var PostsStore *storage.PostStorage
 var AuthorStore *storage.AuthorStorage
+var TaskStore *storage.TaskStorage
 var Tmpl *template.Template
 
 // Implement

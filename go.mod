@@ -4,6 +4,7 @@ go 1.22.1
 
 require (
 	github.com/PuerkitoBio/goquery v1.9.2
+	github.com/angelofallars/htmx-go v0.5.0
 	github.com/chromedp/cdproto v0.0.0-20240529195259-de715aab5f80
 	github.com/chromedp/chromedp v0.9.5
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
@@ -14,7 +15,6 @@ require (
 
 require (
 	github.com/andybalholm/cascadia v1.3.2 // indirect
-	github.com/angelofallars/htmx-go v0.5.0 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
