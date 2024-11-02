@@ -28,3 +28,17 @@ type Content struct {
 	Post   Post   `csv:"post"`
 	Author Author `csv:"author"`
 }
+
+type Task struct {
+	Id        string    `csv:"id"`
+	Status    int       `csv:"status"`
+	CreatedAt time.Time `csv:"created_at"`
+	UpdatedAt time.Time `csv:"updated_at"`
+}
+
+type TaskPost struct {
+	TaskId    string    `csv:"task_id"`
+	PostUrl   string    `csv:"post_url"`
+	CreatedAt time.Time `csv:"created_at"`
+	UpdatedAt time.Time `csv:"updated_at"`
+}
