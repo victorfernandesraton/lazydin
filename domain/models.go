@@ -30,14 +30,14 @@ type Content struct {
 }
 
 type Task struct {
-	Id        string    `csv:"id"`
+	Id        int64     `csv:"id"`
 	Status    int       `csv:"status"`
 	CreatedAt time.Time `csv:"created_at"`
 	UpdatedAt time.Time `csv:"updated_at"`
 }
 
 type TaskPost struct {
-	TaskId    string    `csv:"task_id"`
+	TaskId    int64     `csv:"task_id"`
 	PostUrl   string    `csv:"post_url"`
 	CreatedAt time.Time `csv:"created_at"`
 	UpdatedAt time.Time `csv:"updated_at"`
