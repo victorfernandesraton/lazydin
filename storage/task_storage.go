@@ -28,6 +28,8 @@ const selectAllTasks = `SELECT id, status, created_at, updated_at FROM tasks;`
 
 const getPostsByTaskId = `SELECT url, content, author_url , created_at, updated_at FROM task_post INNER JOIN posts ON task_post.post_url = posts.url WHERE task_id = ?;`
 
+const getPostsByTasks = `SELECT post.url as url, post.content as content, post.author_url as author_url , post.created_at as created_at, post.updated_at as updated_at FROM task_post INNER JOIN posts ON task_post.post_url = posts.url INNER JOIN tasks on task_post.task_id = task.id and task.status > 1`
+
 type TaskStorage struct {
 	db *sql.DB
 }
