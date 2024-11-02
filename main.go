@@ -131,6 +131,7 @@ var commands = []cobra.Command{
 			server.PostsStore = postsStore
 			server.Configs = configs
 			server.Tmpl = tmpl
+			log.Println(fmt.Sprintf("Starting server on port http://127.0.0.1:%d", port))
 
 			http.HandleFunc("/search", server.SearchPostsInLinkedin)
 			http.HandleFunc("/posts", server.GetPosts)

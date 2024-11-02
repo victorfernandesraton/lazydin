@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lazydin - Search</title>
+    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+
+</head>
+<style>
+    #loading {
+        display: none;
+    }
+
+    #loading.htmx-request {
+        display: flex;
+    }
+</style>
+
+<body>
+    <form hx-post="/search" hx-indicator="#loading" hx-target="#result" hx-swap="innerHTML" hx-encode="m">
+        <label for="query">Search for new posts:</label>
+        <input id="query" type="search" name="query">
+        <button type="submit">Search</button>
+    </form>
+    <div id="result"></div>
+    <div id="loading">Loading...</div>
+</body>
+
+</html>

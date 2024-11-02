@@ -19,16 +19,12 @@
 </script>
 
 <body>
-    <form hx-get="/posts" hx-target="#posts" hx-swap="innerHTML">
-        <label for="authorName">Search by author:</label>
-        <input id="authorName" type="search" name="author_name" placeholder="Search by author...">
-        <button type="submit">Search</button>
-    </form>
     <form hx-post="/search" hx-target="#posts" hx-swap="innerHTML" hx-encode="json">
         <label for="query">Search for new posts:</label>
         <input id="query" type="search" name="query">
         <button type="submit">Search</button>
     </form>
+    <a href="/search">Search for new posts</a>
     <ul id="posts">
         {{ range . }}
         {{template "post-item" .}}

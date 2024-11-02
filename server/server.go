@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -30,21 +31,7 @@ type FindJobPost struct {
 	Query string `json:"query"`
 }
 
-func SearchPostsInLinkedin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	query := r.Form.Get("query")
-	if query == "" {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+func ExecuteSearchPostInLinkedin(query string) ([]domain.Content, error) {
 
 	opts := browser.CreateBrowserOptions(browser.DefaultBrowserOptions())
 	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
@@ -58,36 +45,68 @@ func SearchPostsInLinkedin(w http.ResponseWriter, r *http.Request) {
 	if err := chromedp.Run(ctx,
 		workflow.Auth(credentials.Username, credentials.Password), workflow.SearchForPosts(query),
 	); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return nil, err
 	}
 
 	content, err := workflow.ExtractOuterHTML(ctx)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
+	return adapters.ExtractContent(content)
+}
 
-	result, err := adapters.ExtractContent(content)
-	if err != nil {
-
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+func SearchPostsInLinkedin(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(fmt.Sprintf("searching posts in linkedin method %s", r.Method))
+	switch r.Method {
+	case "GET":
+		err := Tmpl.ExecuteTemplate(w, "search.html", nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
-	}
-	for _, v := range result {
-		if _, err := PostsStore.Upsert(&v.Post); err != nil {
+	case "POST":
+		if !htmx.IsHTMX(r) {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 
+		var posts []domain.Post
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		query := r.Form.Get("query")
+		if query == "" {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		result, err := ExecuteSearchPostInLinkedin(query)
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if _, err := AuthorStore.Upsert(&v.Author); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 
+		for _, v := range result {
+			posts = append(posts, v.Post)
+			if _, err := PostsStore.Upsert(&v.Post); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := AuthorStore.Upsert(&v.Author); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
+		err = Tmpl.ExecuteTemplate(w, "posts-list.html", posts)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("OK"))
 }
 
 func GetPostByUrl(w http.ResponseWriter, r *http.Request) {
