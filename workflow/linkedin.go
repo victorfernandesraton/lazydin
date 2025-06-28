@@ -20,7 +20,7 @@ const (
 	search_xpath            = "//input[@placeholder='Search']"
 	search_qs               = "#global-nav-typeahead > input"
 	button_posts            = "//nav/*/ul/li/button[text() = 'Posts']"
-	post_xpath              = "//ul[@role='list' and contains(@class, 'reusable-search__entity-result-list')]/li"
+	post_xpath              = "///ul/li[contains(@class, 'artdeco-card')]"
 	profileActionButtons_qs = "main button.pvs-profile-actions__action span"
 )
 
