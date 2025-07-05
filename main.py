@@ -1,11 +1,10 @@
 import uvicorn
+from decouple import config
 from fastapi import FastAPI, Form, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse
-
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from decouple import config
 
 from lazydin.browser import RemoteBrowserService
 
