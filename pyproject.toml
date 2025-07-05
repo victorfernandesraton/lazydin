@@ -1,0 +1,18 @@
+[project]
+name = "lazydin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aiofiles>=24.1.0",
+    "aiosqlite>=0.21.0",
+    "alembic>=1.16.2",
+    "fake-useragent>=2.2.0",
+    "fastapi[standard]>=0.115.14",
+    "jinja2>=3.1.6",
+    "python-decouple>=3.8",
+    "selenium>=4.33.0",
+    "sqlalchemy>=2.0.41",
+    "undetected-chromedriver>=3.5.5",
+]

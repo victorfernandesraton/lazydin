@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Selenium Scraper</title>
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+</head>
+<body>
+    <h1>Scraping com Selenium Grid</h1>
+
+    <form hx-post="/scrape" hx-target="#result" hx-swap="innerHTML">
+        <input type="text" name="url" placeholder="Digite a URL para scrape" />
+        <button type="submit">Scrapear</button>
+    </form>
+
+    <div id="result">
+        <!-- Resposta do servidor será injetada aqui -->
+    </div>
+</body>
+</html>
+
