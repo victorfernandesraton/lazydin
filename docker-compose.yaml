@@ -1,27 +1,42 @@
-version: "3.8"
-services:
-  selenium-hub:
-    image: selenium/hub:4.8.0-20230210
-    container_name: selenium-hub
-    ports:
-      - "4442:4442"
-      - "4443:4443"
-      - "4444:4444"
-    environment:
-      - JAVA_OPTS=-Djdk.httpclient.websocket.intermediateBufferSize=3000000
-      - SE_EVENT_BUS_HOST=selenium-hub
+# version: '3'
+# services:
+#   selenium-hub:
+#     image: selenium/hub:4.8
+#     container_name: selenium-hub
+#     ports:
+#       - "4442:4442"
+#       - "4443:4443"
+#       - "4444:4444"
+#     environment:
+#       - JAVA_OPTS=-Djdk.httpclient.websocket.intermediateBufferSize=3000000
+#       - SE_EVENT_BUS_HOST=selenium-hub
+#
+#   chrome:
+#     image: selenium/node-chrome:4.8
+#     shm_size: '2g'
+#     depends_on:
+#       - selenium-hub
+#     environment:
+#       - JAVA_OPTS=-Djdk.httpclient.websocket.intermediateBufferSize=3000000
+#       - SE_EVENT_BUS_HOST=selenium-hub
+#       - SE_EVENT_BUS_PUBLISH_PORT=4442
+#       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+#       - HUB_HOST=selenium-hub
+#       - HUB_PORT=4444
+#       - SE_NODE_GRID_URL=http://selenium-hub:4444
+version: '3.8'
 
-  chrome:
-    image: selenium/node-chrome:4.8.0-20230210
-    shm_size: 2gb
-    depends_on:
-      - selenium-hub
+services:
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.53.0-noble
+    user: pwuser
+    ports:
+      - "4444:3000"  # Mapeia a porta 4444 do host para a porta 3000 do container
+    working_dir: /home/pwuser
+    command: /bin/sh -c "npx -y playwright run-server --port 3000 --host 0.0.0.0"
     environment:
-      - JAVA_OPTS=-Djdk.httpclient.websocket.intermediateBufferSize=3000000
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_EVENT_BUS_PUBLISH_PORT=4442
-      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - HUB_HOST=selenium-hub
-      - HUB_PORT=4444
-      - SE_NODE_GRID_URL=http://selenium-hub:4444
+      - PLAYWRIGHT_BROWSERS_PATH=/home/pwuser/.cache/ms-playwright
+    init: true
+    stdin_open: true
+    tty: true
 

@@ -5,21 +5,25 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-
-from lazydin.browser import RemoteBrowserService
+from lazydin.browser import NoDriverService
+from lazydin.workflows.linkedin.auth import  LinkedinAuth
+import nodriver as nc
+import time
+# from lazydin.browser import RemoteBrowserService
 
 templates = Jinja2Templates(directory="lazydin/template")
 
 
-
 # Função síncrona que roda Selenium
-def run_selenium(url: str) -> str:
-    # TODO: preciso depois de uma pool de broserser
-    browser_service = RemoteBrowserService(selenium_remote_url=config("SELENIUM_GRID_URL"))
-    driver_key = browser_service.open_browser()
-    with browser_service.drivers[driver_key] as driver:
-        driver.get(url)
-        return driver.page_source.title()
+async def run_selenium(url: str) -> str:
+    service = NoDriverService()
+    driver = await service.open_browser()
+    auth = LinkedinAuth(service)
+    await auth.execute(driver_key=driver, username="test@gmail.com", password="test")
+
+    del service
+
+    return "ok"
 
 
 app = FastAPI()
@@ -39,7 +43,7 @@ async def health():
 # Endpoint que retorna HTML parcial
 @app.post("/scrape", response_class=HTMLResponse)
 async def scrape(url: str = Form(...)):
-    title = await run_in_threadpool(run_selenium, url)
+    title = await run_selenium(url)
     return f"<p><strong>Título da página:</strong> {title}</p>"
 
 

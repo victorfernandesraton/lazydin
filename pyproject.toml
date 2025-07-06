@@ -11,8 +11,14 @@ dependencies = [
     "fake-useragent>=2.2.0",
     "fastapi[standard]>=0.115.14",
     "jinja2>=3.1.6",
+    "nodriver>=0.47.0",
+    "playwright>=1.53.0",
     "python-decouple>=3.8",
     "selenium>=4.33.0",
     "sqlalchemy>=2.0.41",
     "undetected-chromedriver>=3.5.5",
+    "uvicorn>=0.35.0",
 ]
+
+[tool.uv.workspace]
+members = ["venv"]
