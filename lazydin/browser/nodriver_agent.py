@@ -3,6 +3,7 @@ import time
 from uuid import uuid4
 
 from nodriver import Browser, Config, start, Element
+from asyncio import sleep
 
 
 class NoDriverService:
@@ -35,5 +36,5 @@ class NoDriverService:
     @staticmethod
     async def human_input_simulate(element: Element, content: str, delay=1):
         for key in content:
-            time.sleep(delay)
+            await sleep(delay)
             await element.send_keys(key)

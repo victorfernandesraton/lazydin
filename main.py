@@ -1,15 +1,15 @@
 import uvicorn
 from decouple import config
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from lazydin.browser import NoDriverService
-from lazydin.workflows.linkedin.auth import  LinkedinAuth
+from lazydin.workflows.linkedin.auth import LinkedinAuth
 import nodriver as nc
+import asyncio
 import time
-# from lazydin.browser import RemoteBrowserService
 
 templates = Jinja2Templates(directory="lazydin/template")
 
@@ -34,6 +34,10 @@ class ScrapeRequest(BaseModel):
     url: str
 
 
+def run_selenium_background(url: str):
+    asyncio.run(run_selenium(url))
+
+
 @app.get("/health")
 async def health():
     return ":-)"
@@ -42,12 +46,12 @@ async def health():
 # Endpoint assíncrono com corpo da requisição
 # Endpoint que retorna HTML parcial
 @app.post("/scrape", response_class=HTMLResponse)
-async def scrape(url: str = Form(...)):
-    title = await run_selenium(url)
-    return f"<p><strong>Título da página:</strong> {title}</p>"
+async def scrape(backgroud_tasks: BackgroundTasks, url: str = Form(...)):
+    backgroud_tasks.add_task(run_selenium_background, url)
+    return f"<p><strong>Título da página:</strong> {url}</p>"
 
 
-@app.get("/", response_class=HTMLResponse)
+@ app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
