@@ -8,7 +8,6 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from lazydin.workflows.linkedin.auth import LinkedinAuth
 from lazydin.workflows.subprocess_manager import TaskManager
 
 logging.basicConfig(
@@ -41,23 +40,6 @@ class ScrapeRequest(BaseModel):
 async def health():
     return ":-)"
 
-@app.post("/auth")
-async def auth(request: ScrapeRequest):
-    # Run the execute method directly with parameters as a dictionary
-    task_id = TaskManager.run_function(
-        "lazydin.workflows.linkedin.auth.LinkedinAuth.execute",
-        {
-            "driver_key": None,  # driver_key will be created inside the method
-            "username": request.username,
-            "password": request.password
-        }
-    )
-    
-    return JSONResponse({
-        "task_id": task_id,
-        "status": "running"
-    })
-
 @app.get("/task/{task_id}")
 async def get_task_status(task_id: str):
     task = TaskManager.get_task(task_id)
@@ -84,7 +66,7 @@ class RunFunctionRequest(BaseModel):
     args: List[Any] = []
     kwargs: Dict[str, Any] = {}
 
-@app.post("/run")
+@app.post("/task")
 async def run_function(request: RunFunctionRequest):
     """Generic endpoint to run any function in the background"""
     task_id = TaskManager.run_function(
@@ -99,22 +81,6 @@ async def run_function(request: RunFunctionRequest):
     })
 
 
-@app.post("/scrape", response_class=HTMLResponse)
-async def scrape(background_tasks: BackgroundTasks, url: str = Form(...)):
-    # Run the execute method directly with parameters as a dictionary
-    task_id = TaskManager.run_function(
-        "lazydin.workflows.linkedin.auth.LinkedinAuth.execute",
-        {
-            "driver_key": None,  # driver_key will be created inside the method
-            "username": "test@gmail.com",
-            "password": "test"
-        }
-    )
-    return f"<p><strong>Task ID:</strong> {task_id}</p><p><strong>URL:</strong> {url}</p>"
-
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
