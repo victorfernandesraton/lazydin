@@ -21,6 +21,8 @@ app = FastAPI()
 
 @app.on_event("startup")
 def startup_event():
+    TaskManager.start_task_loop()
+    
     background_tasks = BackgroundTasks()
     background_tasks.add_task(cleanup_old_tasks_periodically)
 
@@ -28,6 +30,11 @@ async def cleanup_old_tasks_periodically():
     while True:
         await asyncio.sleep(3600)  # Clean up every hour
         TaskManager.cleanup_old_tasks()
+
+@app.on_event("shutdown")
+def shutdown_event():
+    # Shutdown the task manager
+    TaskManager.shutdown()
 
 # Modelo de dados para o corpo da requisição
 class ScrapeRequest(BaseModel):
@@ -39,6 +46,12 @@ class ScrapeRequest(BaseModel):
 @app.get("/health")
 async def health():
     return ":-)"
+
+@app.get("/tasks")
+async def list_all_tasks():
+    """Get a list of all tasks"""
+    tasks = TaskManager.get_all_tasks()
+    return JSONResponse({"tasks": tasks})
 
 @app.get("/task/{task_id}")
 async def get_task_status(task_id: str):
@@ -63,16 +76,14 @@ async def cancel_task(task_id: str):
 
 class RunFunctionRequest(BaseModel):
     function_path: str
-    args: List[Any] = []
-    kwargs: Dict[str, Any] = {}
+    params: Dict[str, Any] = {}
 
 @app.post("/task")
 async def run_function(request: RunFunctionRequest):
     """Generic endpoint to run any function in the background"""
     task_id = TaskManager.run_function(
         request.function_path,
-        *request.args,
-        **request.kwargs
+        request.params
     )
     
     return JSONResponse({

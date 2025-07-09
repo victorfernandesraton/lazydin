@@ -6,13 +6,18 @@ import time
 import traceback
 import uuid
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor
 
 
 class TaskManager:
-    """Manages background tasks using threads and asyncio"""
+    """Manages background tasks using a separate event loop"""
 
     tasks: Dict[str, Dict[str, Any]] = {}
     _lock = threading.Lock()
+    _task_loop = None
+    _task_thread = None
+    _executor = ThreadPoolExecutor(max_workers=10)
+    _running = False
 
     @staticmethod
     def generate_task_id() -> str:
@@ -57,9 +62,51 @@ class TaskManager:
             return globals()[function_path]
 
     @classmethod
-    async def _run_async_function(
-        cls, task_id: str, function_path: str, *args, **kwargs
-    ):
+    def _task_loop_thread(cls):
+        """Thread function that runs a separate event loop for background tasks"""
+        # Create a new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        cls._task_loop = loop
+        
+        # Create a queue for tasks
+        cls._task_queue = asyncio.Queue()
+        
+        # Start the event loop with our worker
+        try:
+            loop.run_until_complete(cls._task_worker())
+        except Exception as e:
+            logging.error(f"Task loop thread error: {e}")
+        finally:
+            loop.close()
+            cls._task_loop = None
+            logging.info("Task loop thread stopped")
+    
+    @classmethod
+    async def _task_worker(cls):
+        """Worker that processes tasks from the queue"""
+        cls._running = True
+        while cls._running:
+            try:
+                # Get a task from the queue
+                task_info = await cls._task_queue.get()
+                task_id = task_info["task_id"]
+                function_path = task_info["function"]
+                args = task_info["args"]
+                kwargs = task_info["kwargs"]
+                
+                # Run the task
+                await cls._run_async_function(task_id, function_path, *args, **kwargs)
+                
+                # Mark the task as done
+                cls._task_queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logging.exception(f"Error in task worker: {e}")
+    
+    @classmethod
+    async def _run_async_function(cls, task_id: str, function_path: str, *args, **kwargs):
         """Run an async function and store its result"""
         try:
             func = cls._import_function(function_path)
@@ -75,6 +122,8 @@ class TaskManager:
                     cls.tasks[task_id]["status"] = "completed"
                     cls.tasks[task_id]["result"] = result
                     cls.tasks[task_id]["end_time"] = time.time()
+                    # Remove the task from the dictionary once completed
+                    cls.tasks.pop(task_id)
             except Exception as e:
                 logging.exception(f"Error executing async function: {e}")
                 with cls._lock:
@@ -82,6 +131,8 @@ class TaskManager:
                     cls.tasks[task_id]["error"] = str(e)
                     cls.tasks[task_id]["traceback"] = traceback.format_exc()
                     cls.tasks[task_id]["end_time"] = time.time()
+                    # Remove the task from the dictionary once it has an error
+                    cls.tasks.pop(task_id)
 
         except Exception as e:
             logging.exception(f"Error in task {task_id}: {e}")
@@ -90,11 +141,35 @@ class TaskManager:
                 cls.tasks[task_id]["error"] = str(e)
                 cls.tasks[task_id]["traceback"] = traceback.format_exc()
                 cls.tasks[task_id]["end_time"] = time.time()
+                # Remove the task from the dictionary once it has an error
+                cls.tasks.pop(task_id)
 
+    @classmethod
+    def start_task_loop(cls):
+        """Start the background task loop if it's not already running"""
+        if cls._task_thread is None or not cls._task_thread.is_alive():
+            cls._running = True
+            cls._task_thread = threading.Thread(target=cls._task_loop_thread, daemon=True)
+            cls._task_thread.start()
+            logging.info("Started background task loop thread")
+    
+    @classmethod
+    def stop_task_loop(cls):
+        """Stop the background task loop"""
+        if cls._task_loop and cls._task_thread and cls._task_thread.is_alive():
+            cls._running = False
+            # Signal the loop to stop
+            future = asyncio.run_coroutine_threadsafe(
+                asyncio.sleep(0), cls._task_loop
+            )
+            future.result(timeout=5)  # Wait up to 5 seconds for clean shutdown
+            cls._task_thread.join(timeout=5)
+            logging.info("Stopped background task loop thread")
+    
     @classmethod
     def run_function(cls, function_path: str, *args, **kwargs) -> str:
         """
-        Run any Python async function in a background task
+        Run any Python async function in a background task loop
 
         Args:
             function_path: Import path to the function (e.g., 'module.submodule.function')
@@ -104,6 +179,9 @@ class TaskManager:
         Returns:
             task_id: Unique ID for the task
         """
+        # Make sure the task loop is running
+        cls.start_task_loop()
+        
         task_id = cls.generate_task_id()
 
         with cls._lock:
@@ -117,12 +195,25 @@ class TaskManager:
                 "end_time": None,
                 "result": None,
             }
+        
+        # Add the task to the queue in the background thread
+        if cls._task_loop:
+            task_info = cls.tasks[task_id].copy()
+            future = asyncio.run_coroutine_threadsafe(
+                cls._task_queue.put(task_info), cls._task_loop
+            )
+            # Ensure the task is added to the queue
+            future.result(timeout=5)
+        else:
+            logging.error("Task loop is not running, cannot add task")
+            with cls._lock:
+                cls.tasks[task_id]["status"] = "error"
+                cls.tasks[task_id]["error"] = "Task loop is not running"
+                cls.tasks[task_id]["end_time"] = time.time()
+                # Remove the task from the dictionary once it has an error
+                cls.tasks.pop(task_id)
 
-        asyncio.create_task(
-            cls._run_async_function(task_id, function_path, *args, **kwargs)
-        )
-
-        logging.info(f"Started async function {function_path} as task {task_id}")
+        logging.info(f"Queued async function {function_path} as task {task_id}")
         return task_id
 
     @classmethod
@@ -165,6 +256,8 @@ class TaskManager:
             if task["status"] == "running":
                 task["status"] = "cancelled"
                 task["end_time"] = time.time()
+                # Remove the task from the dictionary once cancelled
+                cls.tasks.pop(task_id)
                 return True
             return False
 
@@ -187,3 +280,10 @@ class TaskManager:
                         and (current_time - task["end_time"]) > max_age_seconds
                     ):
                         cls.tasks.pop(task_id)
+    
+    @classmethod
+    def shutdown(cls):
+        """Shutdown the task manager and clean up resources"""
+        cls.stop_task_loop()
+        if cls._executor:
+            cls._executor.shutdown(wait=False)
