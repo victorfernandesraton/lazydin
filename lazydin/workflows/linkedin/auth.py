@@ -12,13 +12,23 @@ class LinkedinAuth:
 
     def __init__(
         self,
-        browser_service: NoDriverService,
+        browser_service: NoDriverService = None,
         linkedin_domain="https://www.linkedin.com",
     ):
         self.browser_service = browser_service
         self.linkedin_domain = linkedin_domain
 
-    async def execute(self, driver_key: str, username: str, password: str):
+    async def execute(self, params: dict = None):
+        if params is None:
+            params = {}
+            
+        driver_key = params.get('driver_key')
+        username = params.get('username')
+        password = params.get('password')
+        
+        if self.browser_service is None:
+            self.browser_service = NoDriverService()
+            driver_key = await self.browser_service.open_browser()
         logging.info("go to site")
         driver = self.browser_service.drivers[driver_key]
         page = await driver.get(f"{self.linkedin_domain}/login")
@@ -47,4 +57,10 @@ class LinkedinAuth:
         await btn_submit[0].click()
         logging.info("button clicked")
         await page.close()
+        
+        # If we created our own browser service, clean it up
+        if driver_key is None:
+            self.browser_service.close()
+            
+        return {"status": "success", "message": "Authentication completed"}
 
