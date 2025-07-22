@@ -36,6 +36,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+
 async def cleanup_old_tasks_periodically():
     while True:
         await asyncio.sleep(3600)  # Clean up every hour
@@ -108,10 +109,7 @@ async def get_workflows_documentation(workflows_path: Optional[str] = None):
     path = workflows_path or TaskManager._workflows_path
     analyzer = WorkflowsAnalyzer(workflows_path=path)
     documentation = analyzer.get_workflow_documentation()
-    
     return JSONResponse(documentation)
-
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
