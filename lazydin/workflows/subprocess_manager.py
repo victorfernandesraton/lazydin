@@ -18,15 +18,27 @@ class TaskManager:
     _task_thread = None
     _executor = ThreadPoolExecutor(max_workers=10)
     _running = False
+    _workflows_path = "lazydin.workflows"  # Default workflows path
 
     @staticmethod
     def generate_task_id() -> str:
         """Generate a unique ID for a task"""
         return str(uuid.uuid4())
 
-    @staticmethod
-    def _import_function(function_path: str) -> Callable:
+    @classmethod
+    def initialize(cls, workflows_path: str = "lazydin.workflows"):
+        """Initialize the TaskManager with a specific workflows path"""
+        cls._workflows_path = workflows_path
+        logging.info(f"TaskManager initialized with workflows path: {workflows_path}")
+        return cls
+
+    @classmethod
+    def _import_function(cls, function_path: str) -> Callable:
         """Import a function from its path"""
+
+        # If the function path doesn't contain a dot, assume it's a module under the workflows path
+        function_path = f"{cls._workflows_path}.{function_path}"
+
         if "." in function_path:
             parts = function_path.split(".")
 
@@ -34,6 +46,7 @@ class TaskManager:
                 method_name = parts[-1]
                 class_name = parts[-2]
                 module_path = ".".join(parts[:-2])
+                logging.info(module_path)
 
                 module = importlib.import_module(module_path)
 

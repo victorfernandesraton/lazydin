@@ -6,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.remote.webelement import WebElement
-# TODO: criar local browser service
+
 class RemoteBrowserService:
     drivers:  dict[str, WebDriver]
     selenium_remote_url: str
