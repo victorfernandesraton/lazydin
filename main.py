@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI
@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 
 
 from lazydin.workflows.subprocess_manager import TaskManager
+from lazydin.workflows.workflows_analyzer import WorkflowsAnalyzer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -99,6 +100,16 @@ async def run_function(request: RunFunctionRequest):
         "task_id": task_id,
         "status": "running"
     })
+
+
+@app.get("/workflows")
+async def get_workflows_documentation(workflows_path: Optional[str] = None):
+    """Get documentation for all workflows in the specified path"""
+    path = workflows_path or TaskManager._workflows_path
+    analyzer = WorkflowsAnalyzer(workflows_path=path)
+    documentation = analyzer.get_workflow_documentation()
+    
+    return JSONResponse(documentation)
 
 
 
