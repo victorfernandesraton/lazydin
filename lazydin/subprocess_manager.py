@@ -22,7 +22,7 @@ class TaskManager:
         return str(uuid.uuid4())
 
     @classmethod
-    def initialize(cls, workflows_path: str = "lazydin.workflows"):
+    def initialize(cls, workflows_path: str = "workflows"):
         """Initialize the TaskManager with a specific workflows path"""
         cls._workflows_path = workflows_path
         logging.info(f"TaskManager initialized with workflows path: {workflows_path}")

@@ -1,9 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "lazydin"
-version = "0.1.0"
-description = "Add your description here"
+version = "4.2.11"
+description = "Lazydin automation tool"
 readme = "README.md"
 requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Lazydin Team"}
+]
 dependencies = [
     "aiofiles>=24.1.0",
     "aiosqlite>=0.21.0",
@@ -18,5 +26,16 @@ dependencies = [
     "uvicorn>=0.35.0",
 ]
 
+[project.scripts]
+lazydin = "lazydin.__main__:main"
+
+[tool.setuptools]
+packages = ["lazydin", "workflows"]
+
 [tool.uv.workspace]
 members = ["venv"]
+
+[dependency-groups]
+dev = [
+    "build>=1.2.2.post1",
+]

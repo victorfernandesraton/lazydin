@@ -11,12 +11,12 @@ class WorkflowsAnalyzer:
     documentation from the classes exposed by those submodules.
     """
 
-    def __init__(self, workflows_path: str = "lazydin.workflows"):
+    def __init__(self, workflows_path: str = "workflows"):
         """
         Initialize the WorkflowsAnalyzer with a specific workflows path.
 
         Args:
-            workflows_path: The import path to the workflows directory (e.g., 'lazydin.workflows')
+            workflows_path: The import path to the workflows directory (e.g., 'workflows')
         """
         self.workflows_path = workflows_path
         self.logger = logging.getLogger(__name__)
@@ -36,8 +36,8 @@ class WorkflowsAnalyzer:
             # Get all submodules
             submodules = []
             for _, name, is_pkg in pkgutil.iter_modules(package_path):
-                if is_pkg:  # Only include packages, not individual modules
-                    submodules.append(name)
+                # Include both packages and individual modules
+                submodules.append(name)
 
             return submodules
         except ImportError as e:
