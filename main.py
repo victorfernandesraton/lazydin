@@ -1,14 +1,13 @@
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from typing import Any, Dict, Optional
 
 import uvicorn
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from contextlib import asynccontextmanager
-
 
 from lazydin.workflows.subprocess_manager import TaskManager
 from lazydin.workflows.workflows_analyzer import WorkflowsAnalyzer
@@ -25,13 +24,22 @@ templates = Jinja2Templates(directory="lazydin/template")
 async def lifespan(app: FastAPI):
     # Initialize TaskManager with the workflows path
     TaskManager.initialize(workflows_path="lazydin.workflows")
-    TaskManager.start_task_loop()
+    await TaskManager.start_task_loop()
 
-    background_tasks = BackgroundTasks()
-    background_tasks.add_task(cleanup_old_tasks_periodically)
+    # Start the cleanup task
+    app.state.cleanup_task = asyncio.create_task(cleanup_old_tasks_periodically())
+    
     yield
 
-    TaskManager.shutdown()
+    # Cancel the cleanup task
+    if hasattr(app.state, 'cleanup_task'):
+        app.state.cleanup_task.cancel()
+        try:
+            await app.state.cleanup_task
+        except asyncio.CancelledError:
+            pass
+    
+    await TaskManager.shutdown()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -39,8 +47,11 @@ app = FastAPI(lifespan=lifespan)
 
 async def cleanup_old_tasks_periodically():
     while True:
-        await asyncio.sleep(3600)  # Clean up every hour
-        TaskManager.cleanup_old_tasks()
+        try:
+            await asyncio.sleep(1800)  # Clean on half hour 
+            await TaskManager.cleanup_old_tasks()
+        except asyncio.CancelledError:
+            break
 
 
 class ScrapeRequest(BaseModel):
@@ -58,7 +69,7 @@ async def health():
 async def list_all_tasks():
     """Get a list of all tasks"""
     tasks = TaskManager.get_all_tasks()
-    return JSONResponse({"tasks": tasks})
+    return JSONResponse(tasks)
 
 
 @app.get("/task/{task_id}")
@@ -92,7 +103,7 @@ class RunFunctionRequest(BaseModel):
 @app.post("/task")
 async def run_function(request: RunFunctionRequest):
     """Generic endpoint to run any function in the background"""
-    task_id = TaskManager.run_function(
+    task_id = await TaskManager.run_function(
         request.function_path,
         request.params
     )
