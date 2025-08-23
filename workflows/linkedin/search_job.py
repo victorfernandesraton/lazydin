@@ -29,9 +29,6 @@ class LinkedinSearch:
         username = params.get("username", "default_user")
         # Store keep_browser_open flag - default to True
         keep_browser_open = params.get("keep_browser_open", True)
-        use_cookies = params.get("use_cookies", True)
-        # category = params.get("category", "Post")
-
         if self.browser_service is None:
             self.browser_service = NoDriverService()
             driver_key = await self.browser_service.open_browser()
@@ -43,22 +40,16 @@ class LinkedinSearch:
         
         # Create a cookie filename based on the username
         cookie_file = f"linkedin_{username.replace('@', '_at_')}.session"
+        if not os.path.exists(cookie_file):
+            raise Exception(f"cookie for {username} not available")
+
+        logging.info(f"Loading cookies from {username}")
+        # First navigate to the domain to be able to set cookies
+        page = await driver.get(self.linkedin_domain)
         
-        # Try to load cookies if use_cookies is True and we don't already have an active session
-        cookies_loaded = False
-        if use_cookies and not params.get("cookies_saved") and os.path.exists(cookie_file):
-            try:
-                logging.info(f"Loading cookies from {cookie_file}")
-                # First navigate to the domain to be able to set cookies
-                page = await driver.get(self.linkedin_domain)
-                
-                # Load cookies directly using the browser's built-in cookie functionality
-                await driver.cookies.load(cookie_file)
-                logging.info("Cookies loaded successfully")
-                cookies_loaded = True
-            except Exception as e:
-                logging.warning(f"Error loading cookies: {e}")
-                cookies_loaded = False
+        # Load cookies directly using the browser's built-in cookie functionality
+        await driver.cookies.load(cookie_file)
+        logging.info("Cookies loaded successfully")
         
         # Go directly to feed page
         page = await driver.get(f"{self.linkedin_domain}/feed")
@@ -66,12 +57,11 @@ class LinkedinSearch:
         await page.find("Home", best_match=True)
         logging.info("set input")
 
-        input_search = await page.xpath(self.SEARCH_INPUT, timeout=10)
+        input_search = await page.xpath(self.SEARCH_INPUT, timeout=40)
         if not input_search:
             raise Exception(f"Not found search input {self.SEARCH_INPUT}")
 
         await self.browser_service.human_input_simulate(input_search[0], search)
-        await page.send
 
         await input_search[0].send(uc.cdp.input_.dispatch_key_event(
             type_="rawKeyDown",
