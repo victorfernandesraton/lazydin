@@ -33,7 +33,6 @@ class LinkedinSearch:
         driver_key = params.get("driver_key")
         username = params.get("username", "default_user")
         # Store keep_browser_open flag - default to True
-        keep_browser_open = params.get("keep_browser_open", True)
         if self.browser_service is None:
             self.browser_service = NoDriverService()
             driver_key = await self.browser_service.open_browser()
